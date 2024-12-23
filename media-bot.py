@@ -1,6 +1,6 @@
 #####################################################################
 # OP-3e: Media Scraping Bot Project                                 #
-# V: 0.9.0                                                          #
+# V: 0.9.1                                                          #
 # Follow local laws and websites guidelines when using this scraper #
 #####################################################################
 
@@ -25,6 +25,127 @@ GLOBAL_MODULES_MAP = {"BRU": [], "PXV": [], "OTH": []}          # Mapper for Eng
 # Scraper class: related to mechanisms of database managment, query building, and query execution  #
 ####################################################################################################
 class Scraper:
+    @staticmethod
+    def bot_init():
+            dependencies = ["gallery-dl"]
+            for package in dependencies:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", package], stdout=subprocess.DEVNULL)
+            
+            # Load the QUERIES database into the program and proccess them, notify user if no query database exist
+            if not os.path.exists("internal"):
+                os.makedirs("internal")
+
+            try:
+                with open(QUERIES, 'r') as file:
+                    contents = file.read()
+                queries = contents.split('@')
+                for query in queries:
+                    if query == '':
+                        break
+                    fragments = query.split('|')
+                    Scraper.Module(*fragments) # Generate modules from the tokenized database entries    
+            except:
+                 print("Creating query database...")
+                 with open(QUERIES, 'w') as file:
+                    pass
+            
+            # Load and initialize the global blacklist, notify user if no entries exist
+            try:
+                with open(BLACKLIST, 'r') as file:
+                    contents = file.read().split("|")
+                for element in contents:
+                    if element != '':
+                        GLOBAL_BLACKLIST.append(element)
+            except:
+                print("Creating blacklist database...")
+                with open(BLACKLIST, 'w') as file:
+                    pass
+
+            # Proccess Batchfile
+            with open(BATCHFILE, 'a+') as file:
+                file.seek(0)
+                contents = file.read()
+            for query in contents.splitlines():
+                Scraper.Module.add_module_from_query(query)
+            with open(BATCHFILE, 'w') as file:
+                pass
+
+    @staticmethod
+    def print_blacklist():
+        print("Printing blacklist entries:")
+        for entry in GLOBAL_BLACKLIST:
+            print(entry)
+        print()
+
+    @staticmethod
+    def generate_queries():
+            for key, value in GLOBAL_MODULES_MAP.items():
+                for module in value:
+                    # Build the queries from the modules metadata
+                    query = ""
+                    if module.engine == "BRU":
+                        query += "https://gelbooru.com/index.php?page=post&s=list&tags="
+                        query += module.query
+                        query += "+id:>" + str(module.lid)
+                        if module.rating == "SFE":
+                            query += "+rating:general"
+                        if module.rating == "SEN":
+                            query += "+rating:questionable"
+                        if module.rating == "EXP":
+                            if module.engine == "BRU":
+                                query += "+rating:explicit" 
+                        for entry in GLOBAL_BLACKLIST + module.lob.split(" "):
+                            if entry != '':
+                                query += "+-" + entry
+                    elif module.engine == "PXV":
+                        if module.mode == "TAG":
+                            query += "https://www.pixiv.net/en/tags/"
+                            query += module.query + "/"
+                            if module.rating == "EXP":
+                                query += "illustrations?mode=r18"
+                            elif module.rating == "SFE":
+                                query += "illustrations?mode=safe"
+                        elif module.mode == "USR":
+                            query += "https://www.pixiv.net/en/users/"
+                            query += module.query + "/"
+                    elif module.engine == "OTH":
+                        query += module.engine
+                    module.generated_query = query
+
+    @staticmethod
+    def execute_queries():
+        for key, value in GLOBAL_MODULES_MAP.items():
+            for module in value:
+                print("Downloading: \n" + module.generated_query)
+                try:
+                    resCapture = subprocess.run(["gallery-dl", "--download-archive", DOWNLOAD_ARCHIVES, module.generated_query], capture_output=True, text=True)
+                    if resCapture.stdout != "":
+                        # print(resCapture.stdout.splitlines()[0].split('id:>')[1].split('_')[0].split(" ")[0])
+                        with open(DOWNLOAD_ARCHIVES, 'a') as file:
+                            # Send output to download archives
+                            file.write(resCapture.stdout)
+                        # Gets the token for BRU storage
+                        lid_token = resCapture.stdout.splitlines()[0].split('_')[-2] if resCapture.stdout else None
+                        if (module.engine == "BRU" and lid_token != None):
+                            print(lid_token)
+                            module.lid = lid_token
+                    print("Execution Completed\n")
+                except:
+                    print("Error: Failed to execute query\n")
+
+    @staticmethod
+    def save_queries():
+        for key, value in GLOBAL_MODULES_MAP.items():
+            for m in value:
+                Scraper.Module.save_module(m.engine, m.query, m.lid, m.lob, m.rating, m.mode, 'w')
+
+    @staticmethod
+    def duplicateBlacklistChecker(query):
+        for entry in GLOBAL_BLACKLIST:
+            if (query == entry):
+                return True
+        return False
+
     ####################################################################################################
     # Module class: represents an internal module to track a queries metadata                          #
     ####################################################################################################
@@ -148,7 +269,7 @@ class Scraper:
                             isVaildInput = False
                             while (isVaildInput == False):
                                 isVaildInput = True
-                                print("\Explicit?:")
+                                print("Explicit?:")
                                 print("[y] Yes")
                                 print("[n] No")
                                 isVaildInput = True
@@ -320,134 +441,13 @@ class Scraper:
                     if mod.engine == "BRU":
                         print("LID:    ", mod.lid)
 
-    @staticmethod
-    def bot_init():
-            dependencies = ["gallery-dl"]
-            for package in dependencies:
-                subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-            
-            # Load the QUERIES database into the program and proccess them, notify user if no query database exist
-            if not os.path.exists("internal"):
-                os.makedirs("internal")
-
-            try:
-                with open(QUERIES, 'r') as file:
-                    contents = file.read()
-                queries = contents.split('@')
-                for query in queries:
-                    if query == '':
-                        break
-                    fragments = query.split('|')
-                    Scraper.Module(*fragments) # Generate modules from the tokenized database entries    
-            except:
-                print("No database file exists, please run -a to add queries to the query database")
-            
-            # Load and initialize the global blacklist, notify user if no entries exist
-            try:
-                with open(BLACKLIST, 'r') as file:
-                    contents = file.read().split("|")
-                for element in contents:
-                    if element != '':
-                        GLOBAL_BLACKLIST.append(element)
-            except:
-                print("No blacklist database file exists, please run -b to add tags to the global blacklist database")
-
-            # Proccess Batchfile
-            with open(BATCHFILE, 'a+') as file:
-                file.seek(0)
-                contents = file.read()
-            for query in contents.splitlines():
-                Scraper.Module.add_module_from_query(query)
-
-            with open(BATCHFILE, 'w') as file:
-                print("Batchfile Proccessed")
-
-    @staticmethod
-    def print_blacklist():
-        print("Printing blacklist entries:")
-        for entry in GLOBAL_BLACKLIST:
-            print(entry)
-        print()
-
-    @staticmethod
-    def generate_queries():
-            for key, value in GLOBAL_MODULES_MAP.items():
-                for module in value:
-                    # Build the queries from the modules metadata
-                    query = ""
-                    if module.engine == "BRU":
-                        query += "https://gelbooru.com/index.php?page=post&s=list&tags="
-                        query += module.query
-                        query += "+id:>" + str(module.lid)
-                        if module.rating == "SFE":
-                            query += "+rating:general"
-                        if module.rating == "SEN":
-                            query += "+rating:questionable"
-                        if module.rating == "EXP":
-                            if module.engine == "BRU":
-                                query += "+rating:explicit" 
-                        for entry in GLOBAL_BLACKLIST + module.lob.split(" "):
-                            if entry != '':
-                                query += "+-" + entry
-                    elif module.engine == "PXV":
-                        if module.mode == "TAG":
-                            query += "https://www.pixiv.net/en/tags/"
-                            query += module.query + "/"
-                            if module.rating == "EXP":
-                                query += "illustrations?mode=r18"
-                            elif module.rating == "SFE":
-                                query += "illustrations?mode=safe"
-                        elif module.mode == "USR":
-                            query += "https://www.pixiv.net/en/users/"
-                            query += module.query + "/"
-                    elif module.engine == "OTH":
-                        query += module.engine
-                    module.generated_query = query
-
-    @staticmethod
-    def execute_queries():
-        for key, value in GLOBAL_MODULES_MAP.items():
-            for module in value:
-                print("Downloading: \n" + module.generated_query)
-                try:
-                    resCapture = subprocess.run(["gallery-dl", "--download-archive", DOWNLOAD_ARCHIVES, module.generated_query], capture_output=True, text=True)
-                    if resCapture.stdout != "":
-                        # print(resCapture.stdout.splitlines()[0].split('id:>')[1].split('_')[0].split(" ")[0])
-                        with open(DOWNLOAD_ARCHIVES, 'a') as file:
-                            # Send output to download archives
-                            file.write(resCapture.stdout)
-                        # Gets the token for BRU storage
-                        lid_token = resCapture.stdout.splitlines()[0].split('_')[-2] if resCapture.stdout else None
-                        if (module.engine == "BRU" and lid_token != None):
-                            print(lid_token)
-                            module.lid = lid_token
-                    print("Execution Completed\n")
-                except:
-                    print("Error: Failed to execute query\n")
-
-    @staticmethod
-    def save_queries():
-        for key, value in GLOBAL_MODULES_MAP.items():
-            for m in value:
-                Scraper.Module.save_module(m.engine, m.query, m.lid, m.lob, m.rating, m.mode, 'w')
-
-    @staticmethod
-    def duplicateBlacklistChecker(query):
-        for entry in GLOBAL_BLACKLIST:
-            if (query == entry):
-                return True
-        return False
-
 # Program entry point
 def main():
     # Setup Step
     Scraper.bot_init()
-
-    
-
     isExecuting = True
 
-    # Automatic execution when called from a schedular
+    # Automatic execution
     if (len(sys.argv) == 2):
         if sys.argv[1] == "-e":
             Scraper.generate_queries()
@@ -465,7 +465,7 @@ def main():
         print("[pm] Print active modules")
         print("[pb] Print global blacklist")
         print("[q]  To quit")
-        query = input("> ")
+        query = input("# ")
         if query == "e":
             print("Execuitng database queries, this may take a while...")
             Scraper.generate_queries()
