@@ -1,0 +1,10 @@
+# Database files
+*.txt
+*.db
+
+# Downloaded
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.mp4

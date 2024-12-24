@@ -27,7 +27,7 @@ GLOBAL_MODULES_MAP = {"BRU": [], "PXV": [], "OTH": []}          # Mapper for Eng
 class Scraper:
     @staticmethod
     def bot_init():
-            dependencies = ["gallery-dl"]
+            dependencies = ["gallery-dl", "yt-dlp"]
             for package in dependencies:
                 subprocess.check_call([sys.executable, "-m", "pip", "install", package], stdout=subprocess.DEVNULL)
             
@@ -43,7 +43,7 @@ class Scraper:
                     if query == '':
                         break
                     fragments = query.split('|')
-                    Scraper.Module(*fragments) # Generate modules from the tokenized database entries    
+                    Scraper.Module(*fragments) # Generate modules from the tokenized database entries
             except:
                  print("Creating query database...")
                  with open(QUERIES, 'w') as file:
@@ -69,6 +69,19 @@ class Scraper:
                 Scraper.Module.add_module_from_query(query)
             with open(BATCHFILE, 'w') as file:
                 pass
+
+
+    @staticmethod
+    def add_blacklist():
+            print("Enter globaly applied blacklisted tags to be added to the database (seperate with spaces):")
+            response = input("# ")
+            tokens = response.split(' ')
+            with open(BLACKLIST, 'a') as file:
+                for token in tokens:
+                    if (Scraper.duplicateBlacklistChecker(token) == False):
+                        file.write(token + "|")
+                    else:
+                        print(token + " is already registered to the global blacklist")
 
     @staticmethod
     def print_blacklist():
@@ -164,7 +177,7 @@ class Scraper:
             GLOBAL_MODULES_MAP[engine].append(self) # Append this module to the mapper
         
         @staticmethod
-        def create_module():
+        def add_module():
             isMoreModules, isVaildInput = True, False
             response, engine, query, lob, rating, lid, mode = [None] * 7
             # Add an engine for deviantart and X, investigate blueskies TODO
@@ -195,7 +208,7 @@ class Scraper:
                 # Execute further steps based on the engine selected
                 if engine == "BRU":
                     print("\nInput search query (Do not input blacklist identifiers, currently supports 1 query):")
-                    query = input("> ")
+                    query = input("# ")
                     sys.stdout.flush()
                     isVaildInput = False
 
@@ -221,11 +234,11 @@ class Scraper:
                         print("Module already in database, skipping...")
                     else:
                         print("\nInput Local blacklists seperated by a space (Press enter for None):")
-                        lob = input()
+                        lob = input("# ")
                         sys.stdout.flush()
                         print("\nEnter the BOORU's Last ID (LID) to download from, or Enter to skip [QUERIES TRANSSFER MODE]")
                         try:
-                            response = int(input())
+                            response = int(input("# "))
                             lid = response
                         except:
                             lid = 0
@@ -244,11 +257,11 @@ class Scraper:
                         if response == '1': # User input mode
                             mode = "USR"
                             print("\nInput Users ID's to track (seperate by spaces):")
-                            query = input().split(' ')
+                            query = input("# ").split(' ')
                         elif response == '2': # Tag Search mode
                             mode = "TAG"
                             print("\nInput Tags:")
-                            query = input()
+                            query = input("# ")
                             isVaildInput = False
                             while (isVaildInput == False):
                                 isVaildInput = True
@@ -292,24 +305,27 @@ class Scraper:
                                 Scraper.Module.save_module(engine, query, lid, lob, rating, mode, 'a')
                 elif (engine == "OTH"):
                     print("\nInput search query (Do not input blacklist identifiers, currently supports 1 query):")
-                    query = input("> ")
+                    query = input("# ")
                     Scraper.Module.add_module_from_query(query)
                     isVaildInput = False
                 isVaildInput = False
 
         @staticmethod
-        def del_module():
+        def delete_module():
             isVaildInput = False
             while (isVaildInput == False):
                 print("Select Engine:")
                 print("[BRU] Booru Engine")
                 print("[PXV] Pixiv Engine")
                 print("[OTH] Other Engine")
+                print("[0] Previous Menu")
                 response = input("#: ")
                 sys.stdout.flush()
                 print("")
                 isVaildInput = True
-                if response in GLOBAL_MODULES_MAP:
+                if response == "0":
+                    return
+                elif response in GLOBAL_MODULES_MAP:
                     modules = GLOBAL_MODULES_MAP[response]
                     for i in range(0, len(modules)):
                         print("ID:    ", i)
@@ -324,7 +340,7 @@ class Scraper:
                     print("SELECT MODULE ID: [ 0, ", len(modules) - 1, "]")
                     isVaildInput = True
                     try:
-                        response = int(input("> "))
+                        response = int(input("# "))
                         sys.stdout.flush()
                         if (response > 0 and response < len(modules)):
                             mod = modules[response]
@@ -341,7 +357,7 @@ class Scraper:
 
         @staticmethod
         def add_module_from_query(response):
-            # Make a better de-tokenizing system for query generation #TODO
+            # Make a better de-tokenizing system for query generation #CRITICAL TODO
             engine, query, lob, rating, lid, mode = [""] * 6
             components = response.split("/")
             engine = components[2].split(".")[-2]
@@ -410,15 +426,30 @@ class Scraper:
         def print_modules():
             isVaildInput = False
             while (isVaildInput == False):
-                print("Select Engine:")
-                print("[BRU] Booru Engine")
-                print("[PXV] Pixiv Engine")
-                print("[OTH] Other Engine")
+                print("\nSelect Engine:")
+                print("[BRU] Booru Entries")
+                print("[PXV] Pixiv Entries")
+                print("[OTH] Other Entries")
+                print("[ALL] All Entries")
+                print("[0] Previous Menu")
                 response = input("#: ")
                 sys.stdout.flush()
                 print("")
                 isVaildInput = True
-                if response in GLOBAL_MODULES_MAP:
+                if response == "0":
+                    return
+                #TODO Flatten this logic at some point (Low Priotiry)
+                elif response == "ALL":
+                    for key, value in GLOBAL_MODULES_MAP.items():
+                        for module in value:
+                            print("ENGINE:             ", module.engine)
+                            print("MODE:               ", module.mode)
+                            print("QUERY:              ", module.query)
+                            print("LOCAL BLACKLIST:    ", module.lob)
+                            if (module.engine == "BRU"):
+                                print("LATS ID DOWNLOADED: ", module.lid)
+                            print("RATING:             ", module.rating + "\n")
+                elif response in GLOBAL_MODULES_MAP:
                     modules = GLOBAL_MODULES_MAP[response]
                     for module in modules:
                         print("ENGINE:             ", module.engine)
@@ -427,19 +458,9 @@ class Scraper:
                         print("LOCAL BLACKLIST:    ", module.lob)
                         if (module.engine == "BRU"):
                             print("LATS ID DOWNLOADED: ", module.lid)
-                        print("RATING:             ", module.rating)
-                        print("")
-                    print("")
+                        print("RATING:             ", module.rating + "\n")
                 else:
                     isVaildInput = False
-            print("Printing modules:\n")
-            for key, value in GLOBAL_MODULES_MAP.items():
-                print("Engine: ", key)
-                for mod in value:
-                    print("Mode:   ", mod.mode)
-                    print("Query:  ", mod.query)
-                    if mod.engine == "BRU":
-                        print("LID:    ", mod.lid)
 
 # Program entry point
 def main():
@@ -457,43 +478,69 @@ def main():
 
     # Promting Stage
     while(isExecuting):
-        print("Enter Command:")
-        print("[e]  EXECUTE")
-        print("[c]  Create entries")
-        print("[d]  Delete entries")
-        print("[b]  add to global blacklist (Booru's only)")
-        print("[pm] Print active modules")
-        print("[pb] Print global blacklist")
-        print("[q]  To quit")
+        print("### Enter Command: ###")
+        print("[1] Database Managment")
+        print("[2] View Bot Info")
+        print("[3] Exectute Bot")
+        print("[0] Quit")
         query = input("# ")
-        if query == "e":
-            print("Execuitng database queries, this may take a while...")
+        print("")
+        if query == "1":
+            isValidInput = False
+            while(isValidInput == False):
+                print("### Database mode activated ###")
+                print("[1] View Entries")
+                print("[2] Add Entry")
+                print("[3] Modify Entry [NOT IMPLEMENTED YET]")
+                print("[4] Delete Entry")
+                print("[5] View Blacklist")
+                print("[6] Add Blacklist tags (BOORU Only)")
+                print("[7] Remove Blacklist tags (BOORU Only)")
+                print("[0] Previous Menu")
+                query = input("# ")
+                if query == "1": # View Entries
+                    Scraper.Module.print_modules()
+                elif query == "2": # Add Entry
+                    Scraper.Module.add_module()
+                elif query == "3": # Modify Entry [NOT IMPLEMENTED YET] TODO
+                    print("Not Implemented")
+                elif query == "4": # Delete Entry
+                    Scraper.Module.delete_module()
+                elif query == "5": # View Blacklist
+                    Scraper.print_blacklist()
+                elif query == "6": # Add Blacklist tags
+                    Scraper.add_blacklist()
+                elif query == "7": # Remove Blacklist tags [NOT IMPLEMENTED YET] TODO
+                    print("TODO")
+                elif query == "0": # Return to main menu
+                    isValidInput = True
+
+        elif query == "2":
+            isValidInput = False
+            while(isValidInput == False):
+                print("### View mode selected ###")
+                print("[1] View Entries")
+                print("[2] View Blacklist")
+                print("[0] Previous Menu")
+                query = input("# ")
+                if query == "1": # View Entries
+                    Scraper.Module.print_modules()
+                elif query == "2": # View Blacklist
+                    Scraper.print_blacklist()
+                elif query == "0": # Return to main menu
+                    isValidInput = True
+        elif query == "3":
+            print("Generating Queries...")
             Scraper.generate_queries()
+            print("Execuitng bot, this may take a while...")
             Scraper.execute_queries()
             Scraper.save_queries()
-        elif query == "c":
-                Scraper.Module.create_module()
-        elif query == "d":
-                Scraper.Module.del_module()
-        elif query == "b":
-            print("Enter globaly applied blacklisted tags to be added to the database (seperate with spaces):")
-            response = input()
-            tokens = response.split(' ')
-            with open(BLACKLIST, 'a') as file:
-                for token in tokens:
-                    if (Scraper.duplicateBlacklistChecker(token) == False):
-                        file.write(token + "|")
-                    else:
-                        print(token + " is already registered to the global blacklist")
-        elif query == "pm":
-            Scraper.Module.print_modules()
-        elif query == "pb":
-            Scraper.print_blacklist()
-        elif query == "q":
-            print("shutting down...")
+        elif query == "0":
+            print("Shutting down...")
             isExecuting = False
-    
+
 if __name__ == "__main__":  main()
+
 ####################################################################################################
 # Developers TODO:
 # Implement video scraping (Tall order, low priority, do everything else first)
