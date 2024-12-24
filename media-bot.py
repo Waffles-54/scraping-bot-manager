@@ -70,7 +70,6 @@ class Scraper:
             with open(BATCHFILE, 'w') as file:
                 pass
 
-
     @staticmethod
     def add_blacklist():
             print("Enter globaly applied blacklisted tags to be added to the database (seperate with spaces):")
@@ -184,7 +183,7 @@ class Scraper:
             while (isMoreModules): # While the user wants to add more entries
                 while (isVaildInput == False):
                     print("\nEnter engine # to use:")
-                    print("[1] Booru")
+                    print("[1] Gelbooru") # TODO support more booru's
                     print("[2] Pixiv")
                     # print("[3] Deviantart [NOT IMPLEMENTED YET]") #TODO
                     print("[4] Manual mode (direct query entry)")
@@ -218,17 +217,20 @@ class Scraper:
                         print("[1] Safe")
                         print("[2] Sensitive")
                         print("[3] Explicit")
+                        print("[4] All")
                         isVaildInput = True
                         response = input("#: ")
+                        sys.stdout.flush()
                         if response == '1': # Safe
                             rating = "SFE"
                         elif response == '2': # Sensitive
                             rating = "SEN"
                         elif response == '3': # Explicit
                             rating = "EXP"
+                        elif response == '4': # All
+                            rating = "ALL"
                         else:
                             isVaildInput = False
-                        sys.stdout.flush()
                     
                     if(Scraper.Module.duplicateModuleChecker(engine, query, rating)):
                         print("Module already in database, skipping...")
@@ -269,6 +271,7 @@ class Scraper:
                                 print("[1] All")
                                 print("[2] Safe")
                                 print("[3] Explicit")
+                                print("[4] All")
                                 response = input("#: ")
                                 if response == '1': # Safe
                                     rating = "ALL"
@@ -276,6 +279,8 @@ class Scraper:
                                     rating = "SFE"
                                 elif response == '3': # Explicit
                                     rating = "EXP"
+                                elif response == '4': # Explicit
+                                    rating = "ALL"
                                 else:
                                     isVaildInput = False
 
@@ -295,13 +300,13 @@ class Scraper:
                                     isVaildInput = False
                                 sys.stdout.flush()
 
-                    print("\nGenerating queries...")
+                    print("\nGenerating module...")
                     for entry in query:
                         if entry != '':
                             if(Scraper.Module.duplicateModuleChecker(engine, query, rating)):
                                 print("Module already in database, skipping...")
                             else:
-                                Scraper.Module(engine, entry, lid, lob, rating, mode)
+                                Scraper.Module(engine, entry, lid, lob, rating, mode) 
                                 Scraper.Module.save_module(engine, query, lid, lob, rating, mode, 'a')
                 elif (engine == "OTH"):
                     print("\nInput search query (Do not input blacklist identifiers, currently supports 1 query):")
@@ -357,7 +362,6 @@ class Scraper:
 
         @staticmethod
         def add_module_from_query(response):
-            # Make a better de-tokenizing system for query generation #CRITICAL TODO
             engine, query, lob, rating, lid, mode = [""] * 6
             components = response.split("/")
             engine = components[2].split(".")[-2]
@@ -378,14 +382,26 @@ class Scraper:
             elif (engine == "gelbooru"):
                 engine = "BRU"
                 lid = "0"
-                query = components[3].split("tags=")[1].split("+")[-1]
-                if(Scraper.Module.duplicateModuleChecker(engine, query, "EXP")):
+                metadata = components[3].split("tags=")[1].split("+")
+                query = metadata[0]
+                if len(metadata) > 1:
+                    if metadata[1] == "rating%3aexplicit":
+                        rating = "EXP"
+                    elif metadata[1] == "rating%3asensitive":
+                        rating = "SEN"
+                    elif metadata[1] == "rating%3ageneral":
+                        rating = "SFE"
+                else:
+                    rating = "ALL"
+                if(Scraper.Module.duplicateModuleChecker(engine, query, rating)):
                     print("Module already in database, skipping...")
                 else:
-                    Scraper.Module(engine, query, lid, lob, "EXP", mode)
-                    Scraper.Module.save_module(engine, query, lid, lob, "EXP", mode, 'a')
+                    Scraper.Module(engine, query, lid, lob, rating, mode)
+                    Scraper.Module.save_module(engine, query, lid, lob, rating, mode, 'a')
 
         @staticmethod
+        #TODO with the implications of the ALL rating, its possible to have double downloads caused by
+        # Multiple entries with differing rating classifiers and an ALL tag creates a dual download
         def duplicateModuleChecker(engine, query, rating):
             for entry in GLOBAL_MODULES_MAP[engine]:
                 if query == entry.query and rating == entry.rating:
