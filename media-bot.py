@@ -1,5 +1,6 @@
 #####################################################################
 # OP-3e: Media Scraping Bot Project                                 #
+# Written by Alice C. G.                                            #
 # V: 0.9.1                                                          #
 # Follow local laws and websites guidelines when using this scraper #
 #####################################################################
@@ -16,7 +17,6 @@ QUERIES = os.path.join(BASE_PATH, "query.db")                   # Database for m
 BLACKLIST = os.path.join(BASE_PATH, "blacklist.db")             # Database for universal blacklist applications (Booru's only)
 BATCHFILE = os.path.join(BASE_PATH, "batch_load.txt")           # File for batch loading in links to be automaticly executed on the bots next run 
 DOWNLOAD_ARCHIVES = os.path.join(BASE_PATH, "downloaded.db")    # Database achrive of downloaded files to avoid redownloading
-
 GLOBAL_BLACKLIST = []                                           # Internal structure for managing the globally applied blacklist (Booru's only)
 GLOBAL_MODULES_MAP = {"BRU": [], "PXV": [], "OTH": []}          # Mapper for Engines to maintain a list of modules
 
@@ -147,7 +147,7 @@ class Scraper:
                         with open(DOWNLOAD_ARCHIVES, 'a') as file:
                             # Send output to download archives
                             file.write(resCapture.stdout)
-                        # Gets the token for BRU storage
+                        # Gets the LID for BRU storage
                         lid_token = resCapture.stdout.splitlines()[0].split('_')[-2] if resCapture.stdout else None
                         if (module.engine == "BRU" and lid_token != None):
                             print(lid_token)
@@ -197,7 +197,7 @@ class Scraper:
                     print("[1] Gelbooru") # TODO support more booru's
                     print("[2] Pixiv")
                     # print("[3] Deviantart [NOT IMPLEMENTED YET]") #TODO
-                    print("[4] Manual mode (direct query entry)")
+                    print("[3] Manual mode (direct query entry)")
                     print("[0] Exit Entry mode")
                     response = input("#: ")
                     sys.stdout.flush()
@@ -210,7 +210,7 @@ class Scraper:
                         engine = "BRU"
                     elif response == '2': # Pixiv input mode
                         engine = "PXV"
-                    elif response == '4': # Manual Mode
+                    elif response == '3': # Manual Mode
                         engine = "OTH"
                     else:
                         isVaildInput = False
@@ -468,7 +468,6 @@ class Scraper:
                     except:
                         isVaildInput = False
 
-
         @staticmethod
         def add_module_from_query(response):
             engine, query, lob, rating, lid, mode = [""] * 6
@@ -670,7 +669,6 @@ if __name__ == "__main__":  main()
 ####################################################################################################
 # Developers TODO:
 # Implement video scraping (Tall order, low priority, do everything else first)
-# Implement the readme
 # Add step back functionality across the program (Mostly complete)
 # Make the database modification better
 ####################################################################################################
