@@ -72,21 +72,32 @@ class Scraper:
 
     @staticmethod
     def add_blacklist():
-            print("Enter globaly applied blacklisted tags to be added to the database (seperate with spaces):")
-            response = input("# ")
-            tokens = response.split(' ')
-            with open(BLACKLIST, 'a') as file:
-                for token in tokens:
-                    if (Scraper.duplicateBlacklistChecker(token) == False):
-                        file.write(token + "|")
-                    else:
-                        print(token + " is already registered to the global blacklist")
+        print("Enter globaly applied blacklisted tags to be added to the database (seperate with spaces):")
+        response = input("# ")
+        tokens = response.split(' ')
+        with open(BLACKLIST, 'a') as file:
+            for token in tokens:
+                if (Scraper.duplicateBlacklistChecker(token) == False):
+                    file.write(token + "|")
+                else:
+                    print(token + " is already registered to the global blacklist")
+
+    @staticmethod
+    def delete_blacklist():
+        Scraper.print_blacklist()
+        print("Enter Entries to remove, seperate by spaces:")
+        response = input("# ").split(' ')
+        for tokens in response:
+            GLOBAL_BLACKLIST.remove(tokens)
+        with open(BLACKLIST, 'w') as file:
+            for token in GLOBAL_BLACKLIST:
+                file.write(token + "|")
 
     @staticmethod
     def print_blacklist():
         print("Printing blacklist entries:")
         for entry in GLOBAL_BLACKLIST:
-            print(entry)
+            print(entry, end=' ')
         print()
 
     @staticmethod
@@ -105,7 +116,7 @@ class Scraper:
                             query += "+rating:questionable"
                         if module.rating == "EXP":
                             if module.engine == "BRU":
-                                query += "+rating:explicit" 
+                                query += "+rating:explicit"
                         for entry in GLOBAL_BLACKLIST + module.lob.split(" "):
                             if entry != '':
                                 query += "+-" + entry
@@ -316,6 +327,104 @@ class Scraper:
                 isVaildInput = False
 
         @staticmethod
+        def mod_module():
+            isExecuting = True
+            while (isExecuting):
+                print("\nSelect Engine:")
+                print("[BRU] Booru Engine")
+                # print("[PXV] Pixiv Engine")
+                print("[0] Previous Menu")
+                response = input("#: ")
+                sys.stdout.flush()
+                print("")
+                isVaildInput = True
+                if response == "0":
+                    return
+                # elif response in GLOBAL_MODULES_MAP and response != "OTH":
+                elif response == "BRU":
+                    modules = GLOBAL_MODULES_MAP[response]
+                    for i in range(0, len(modules)):
+                        print("ID:", i)
+                        # if modules[i].engine == "PXV":
+                        #     print("Mode:", modules[i].mode)
+                        #     print("QUERY: ", modules[i].query)
+                        # elif modules[i].engine == "BRU":
+                        print("QUERY: ", modules[i].query)
+                        print("Local Blacklist:  ", modules[i].lob)
+                        print("")
+    
+                    isVaildInput = False
+                    mod = None
+                    while (isVaildInput == False):
+                        print("SELECT MODULE ID: [ 0, ", len(modules) - 1, "]")
+                        try:
+                            response = int(input("# "))
+                            sys.stdout.flush()
+                            if (response >= 0 and response < len(modules)):
+                                isVaildInput = True
+                                mod = modules[response]
+                            else:
+                                isVaildInput = False
+                        except:
+                            isVaildInput = False
+                    
+                    isMoreModifications = True
+                    while (isMoreModifications == True):
+                        print("\nModifying Entry #", str(response))
+                        print( "Query:", mod.query)
+                        print( "Local Blacklist:", mod.lob)
+                        print( "Rating:", mod.rating)
+                        print("[1] Modify Last ID (LID)")
+                        print("[2] Modify Local Blacklist")
+                        print("[3] Modify Rating")
+                        print("[0] Previous Menu")
+                        res = input("# ")
+                        sys.stdout.flush()
+                        if res == "1": # Modify LID
+                            isVaildInput = False
+                            while(isVaildInput == False):
+                                isVaildInput = True
+                                print("Old LID: ", mod.lid)
+                                print("Enter New LID:")
+                                try:
+                                    mod.lid = int(input("# "))
+                                    sys.stdout.flush()
+                                except:
+                                    print("Invalid LID")
+                                    isVaildInput = False
+                        elif res == "2": # Modify LOB
+                            print("\nOld Blacklist:", mod.lob)
+                            print("Enter Blacklist entries to remove")
+                            mod.lob = input("# ")
+
+                        elif res == "3": # Modify RATING
+                            print("\nEnter new rating class:")
+                            print("Old Rating:", mod.rating)
+                            isVaildInput = False
+                            while (isVaildInput == False):
+                                isVaildInput = True
+                                print("\nInput Rating # Classification:")
+                                print("[1] All")
+                                print("[2] Safe")
+                                print("[3] Explicit")
+                                print("[4] All")
+                                response = input("#: ")
+                                if response == '1': # Safe
+                                    rating = "ALL"
+                                elif response == '2': # Sensitive
+                                    rating = "SFE"
+                                elif response == '3': # Explicit
+                                    rating = "EXP"
+                                elif response == '4': # Explicit
+                                    rating = "ALL"
+                                else:
+                                    isVaildInput = False
+                        elif res == "0": # Return to previous menu 
+                            isMoreModifications = False
+                        # Rewrite database entry
+                        Scraper.save_queries()
+
+        @staticmethod
         def delete_module():
             isVaildInput = False
             while (isVaildInput == False):
@@ -481,6 +590,7 @@ class Scraper:
 # Program entry point
 def main():
     # Setup Step
+    print("Initializing Bot...")
     Scraper.bot_init()
     isExecuting = True
 
@@ -494,7 +604,7 @@ def main():
 
     # Promting Stage
     while(isExecuting):
-        print("### Enter Command: ###")
+        print("\n### Enter Command: ###")
         print("[1] Database Managment")
         print("[2] View Bot Info")
         print("[3] Exectute Bot")
@@ -504,10 +614,10 @@ def main():
         if query == "1":
             isValidInput = False
             while(isValidInput == False):
-                print("### Database mode activated ###")
+                print("### Database mode: ###")
                 print("[1] View Entries")
                 print("[2] Add Entry")
-                print("[3] Modify Entry [NOT IMPLEMENTED YET]")
+                print("[3] Modify Entry")
                 print("[4] Delete Entry")
                 print("[5] View Blacklist")
                 print("[6] Add Blacklist tags (BOORU Only)")
@@ -518,8 +628,8 @@ def main():
                     Scraper.Module.print_modules()
                 elif query == "2": # Add Entry
                     Scraper.Module.add_module()
-                elif query == "3": # Modify Entry [NOT IMPLEMENTED YET] TODO
-                    print("Not Implemented")
+                elif query == "3": # Modify Entry
+                    Scraper.Module.mod_module()
                 elif query == "4": # Delete Entry
                     Scraper.Module.delete_module()
                 elif query == "5": # View Blacklist
@@ -527,14 +637,14 @@ def main():
                 elif query == "6": # Add Blacklist tags
                     Scraper.add_blacklist()
                 elif query == "7": # Remove Blacklist tags [NOT IMPLEMENTED YET] TODO
-                    print("TODO")
+                    Scraper.delete_blacklist()
                 elif query == "0": # Return to main menu
                     isValidInput = True
 
         elif query == "2":
             isValidInput = False
             while(isValidInput == False):
-                print("### View mode selected ###")
+                print("### View mode ###")
                 print("[1] View Entries")
                 print("[2] View Blacklist")
                 print("[0] Previous Menu")
@@ -561,5 +671,6 @@ if __name__ == "__main__":  main()
 # Developers TODO:
 # Implement video scraping (Tall order, low priority, do everything else first)
 # Implement the readme
-# Add step back functionality across the program
+# Add step back functionality across the program (Mostly complete)
+# Make the database modification better
 ####################################################################################################
