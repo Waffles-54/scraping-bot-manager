@@ -44,19 +44,20 @@ class Scraper:
                         break
                     fragments = query.split('|')
                     Scraper.Module(*fragments) # Generate modules from the tokenized database entries
-            except:
-                 print("Creating query database...")
-                 with open(QUERIES, 'w') as file:
-                    pass
+            except Exception as e:
+                if e.errno == 2:
+                    print("Creating query database...")
+                    with open(QUERIES, 'w') as file:
+                        pass
+                else:
+                    print("Error in database!")
             
             # Load and initialize the global blacklist, notify user if no entries exist
             try:
                 with open(BLACKLIST, 'r') as file:
                     contents = file.read().split("|")
-                for element in contents:
-                    if element != '':
-                        GLOBAL_BLACKLIST.append(element)
-            except:
+                    GLOBAL_BLACKLIST = contents.copy()
+            except Exception as e:
                 print("Creating blacklist database...")
                 with open(BLACKLIST, 'w') as file:
                     pass
@@ -153,7 +154,7 @@ class Scraper:
                             print(lid_token)
                             module.lid = lid_token
                     print("Execution Completed\n")
-                except:
+                except Exception as e:
                     print("Error: Failed to execute query\n")
 
     @staticmethod
@@ -253,7 +254,7 @@ class Scraper:
                         try:
                             response = int(input("# "))
                             lid = response
-                        except:
+                        except Exception as e:
                             lid = 0
                         mode = "TAG"
                         print("\nGenerating query...")
@@ -365,7 +366,7 @@ class Scraper:
                                 mod = modules[response]
                             else:
                                 isVaildInput = False
-                        except:
+                        except Exception as e:
                             isVaildInput = False
                     
                     isMoreModifications = True
@@ -389,7 +390,7 @@ class Scraper:
                                 try:
                                     mod.lid = int(input("# "))
                                     sys.stdout.flush()
-                                except:
+                                except Exception as e:
                                     print("Invalid LID")
                                     isVaildInput = False
                         elif res == "2": # Modify LOB
@@ -465,7 +466,7 @@ class Scraper:
                             print("Query Deleted")
                         else:
                             isVaildInput = False
-                    except:
+                    except Exception as e:
                         isVaildInput = False
 
         @staticmethod
