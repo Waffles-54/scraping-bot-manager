@@ -55,8 +55,8 @@ class Scraper:
             # Load and initialize the global blacklist, notify user if no entries exist
             try:
                 with open(BLACKLIST, 'r') as file:
-                    contents = file.read().split("|")
-                    GLOBAL_BLACKLIST = contents.copy()
+                    GLOBAL_BLACKLIST = file.read().split("|")
+
             except Exception as e:
                 print("Creating blacklist database...")
                 with open(BLACKLIST, 'w') as file:
@@ -222,7 +222,6 @@ class Scraper:
                     query = input("# ")
                     sys.stdout.flush()
                     isVaildInput = False
-
                     while (isVaildInput == False):
                         # Determine image rating classification
                         print("\nInput Rating # Classification:")
@@ -257,9 +256,29 @@ class Scraper:
                         except Exception as e:
                             lid = 0
                         mode = "TAG"
-                        print("\nGenerating query...")
-                        Scraper.Module(engine, query, lid, lob, rating, mode)
-                        Scraper.Module.save_module(engine, query, lid, lob, rating, mode, 'a')
+                        print("Confirm entry:")
+                        print("Engine: ", engine)
+                        print("Query:  ", query)
+                        print("LID:    ", lid)
+                        print("LOB:    ", lob)
+                        print("RATING: ", rating)
+                        print("Mode:   ", mode)
+                        isVaildInput = False
+                        while (isVaildInput == False):
+                            print("All info correct? (Y/N)")
+                            isVaildInput = True
+                            response = input("#: ")
+                            sys.stdout.flush()
+                            if response == "Y": # Safe
+                                print("\nGenerating query...")
+                                Scraper.Module(engine, query, lid, lob, rating, mode)
+                                Scraper.Module.save_module(engine, query, lid, lob, rating, mode, 'a')
+                            elif response == "N": # Sensitive
+                                print("Scrapping Entry...")
+                            else:
+                                isVaildInput = False
+
+                        
                 elif engine == "PXV":
                     isVaildInput = False
                     print("\nInput qwery mode:")
@@ -473,40 +492,43 @@ class Scraper:
         def add_module_from_query(response):
             engine, query, lob, rating, lid, mode = [""] * 6
             components = response.split("/")
-            engine = components[2].split(".")[-2]
-            if (engine == "pixiv"):
-                engine = "PXV"
-                mode = components[4]
-                if (mode == "users"):
-                    mode = "USR"
-                    query = components[5]
-                elif (mode == "tags"):
-                    mode = "TAG"
-                    query = components[5]
-                if(Scraper.Module.duplicateModuleChecker(engine, query, rating)):
-                    print("Module already in database, skipping...")
-                else:
-                    Scraper.Module(engine, query, lid, lob, rating, mode)
-                    Scraper.Module.save_module(engine, query, lid, lob, rating, mode, 'a')
-            elif (engine == "gelbooru"):
-                engine = "BRU"
-                lid = "0"
-                metadata = components[3].split("tags=")[1].split("+")
-                query = metadata[0]
-                if len(metadata) > 1:
-                    if metadata[1] == "rating%3aexplicit":
-                        rating = "EXP"
-                    elif metadata[1] == "rating%3asensitive":
-                        rating = "SEN"
-                    elif metadata[1] == "rating%3ageneral":
-                        rating = "SFE"
-                else:
-                    rating = "ALL"
-                if(Scraper.Module.duplicateModuleChecker(engine, query, rating)):
-                    print("Module already in database, skipping...")
-                else:
-                    Scraper.Module(engine, query, lid, lob, rating, mode)
-                    Scraper.Module.save_module(engine, query, lid, lob, rating, mode, 'a')
+            try:
+                engine = components[2].split(".")[1]
+                if (engine == "pixiv"):
+                    engine = "PXV"
+                    mode = components[4]
+                    if (mode == "users"):
+                        mode = "USR"
+                        query = components[5]
+                    elif (mode == "tags"):
+                        mode = "TAG"
+                        query = components[5]
+                    if(Scraper.Module.duplicateModuleChecker(engine, query, rating)):
+                        print("Module already in database, skipping...")
+                    else:
+                        Scraper.Module(engine, query, lid, lob, rating, mode)
+                        Scraper.Module.save_module(engine, query, lid, lob, rating, mode, 'a')
+                elif (engine == "gelbooru"):
+                    engine = "BRU"
+                    lid = "0"
+                    metadata = components[3].split("tags=")[1].split("+")
+                    query = metadata[0]
+                    if len(metadata) > 1:
+                        if metadata[1] == "rating%3aexplicit":
+                            rating = "EXP"
+                        elif metadata[1] == "rating%3asensitive":
+                            rating = "SEN"
+                        elif metadata[1] == "rating%3ageneral":
+                            rating = "SFE"
+                    else:
+                        rating = "ALL"
+                    if(Scraper.Module.duplicateModuleChecker(engine, query, rating)):
+                        print("Module already in database, skipping...")
+                    else:
+                        Scraper.Module(engine, query, lid, lob, rating, mode)
+                        Scraper.Module.save_module(engine, query, lid, lob, rating, mode, 'a')
+            except Exception as e:
+                print("Bad Query, unable to proccess: ", response)
 
         @staticmethod
         #TODO with the implications of the ALL rating, its possible to have double downloads caused by
@@ -542,6 +564,8 @@ class Scraper:
                             db_enc += "SFE|"
                         elif rating == "EXP":
                             db_enc += "EXP|"
+                    else:
+                        db_enc += "|"
                 elif engine == "OTH":
                     db_enc += engine
                 db_enc += mode + "@"
