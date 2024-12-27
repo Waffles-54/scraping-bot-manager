@@ -109,12 +109,12 @@ python3 /path/to/bot/media-bot.py -e
 - media-bot.py 
 
 ## Future Goals
-- [ x ] Initial Release (2024/12/24)
-- [ ] Implementation of more engines (Selectable Booru's, Deviantart, X, Blueskies, etc.)
-- [ ] Implementation of video scraping
-- [ ] Better database access - Better Read/Write implementation
-- [ ] Refactor codebase for better efficiency & Cleaner Code
-- [ ] Setup debugging logger
+- [x] Initial Release (2024/12/24)
+- [] Implementation of more engines (Selectable Booru's, Deviantart, X, Blueskies, etc.)
+- [] Implementation of video scraping
+- [] Better database access - Better Read/Write implementation
+- [] Refactor codebase for better efficiency & Cleaner Code
+- [] Setup debugging logger
 
 ## Credits
 This program uses two external libraries to form the backend of the scraper, check below for sources.
