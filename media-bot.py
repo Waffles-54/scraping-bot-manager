@@ -560,6 +560,65 @@ class Scraper:
         with open(BATCHFILE, 'w') as file:
             pass
 
+    def generate_queries():
+        # Generate Queries for dynamic engines
+        for engine, entries in ENTRY_DICT.items():
+            if engine in BOORU_DICT:
+                web_base = BOORU_DICT.get(engine)
+                for entry in entries:
+                    query = web_base + "/index.php?page=post&s=list&tags="
+                    query += entry.query
+                    query += "+id:>" + str(entry.lid)
+                    if entry.rating == "SFE":
+                        query += "+rating:general"
+                    if entry.rating == "SEN":
+                        query += "+rating:questionable"
+                    if entry.rating == "EXP":
+                        if entry.engine == "GBRU":
+                            query += "+rating:explicit"
+                    for element in GLOBAL_BLACKLIST + entry.lob.split(" "):
+                        if element != '':
+                            query += "+-" + element
+                    entry.generated_query = query
+            elif engine == "PXV":
+                for entry in entries:
+                    if entry.mode == "TAG":
+                        query = "https://www.pixiv.net/en/tags/"
+                        query += entry.query + "/"
+                        if entry.rating == "EXP":
+                            query += "illustrations?mode=r18"
+                        elif entry.rating == "SFE":
+                            query += "illustrations?mode=safe"
+                    elif entry.mode == "USR":
+                        query = "https://www.pixiv.net/en/users/"
+                        query += entry.query + "/"
+                    entry.generated_query = query
+            elif entry.engine == "OTH":
+                entry.generated_query += entry.engine
+
+    def execute_queries():
+        for engine, entries in ENTRY_DICT.items():
+            for entry in entries:
+                print("Downloading: \n" + entry.generated_query)
+                try:
+                    resCapture = subprocess.run(["gallery-dl", "--download-archive", DOWNLOAD_ARCHIVES, entry.generated_query], capture_output=True, text=True)
+                    if resCapture.stdout != "":
+                        # print(resCapture.stdout.splitlines()[0].split('id:>')[1].split('_')[0].split(" ")[0])
+                        with open(DOWNLOAD_ARCHIVES, 'a') as file:
+                            # Send output to download archives
+                            file.write(resCapture.stdout)
+                        # Gets the LID for BRU storage
+                        lid_token = resCapture.stdout.splitlines()[0].split('_')[-2] if resCapture.stdout else None
+                        if (entry.engine in BOORU_DICT and lid_token != None):
+                            print(lid_token)
+                            old_ent = entry.db_query
+                            entry.lid = lid_token
+                            entry.db_query = Scraper.generate_db_ent(engine, entry.query, entry.lid, entry.lob, entry.rating, entry.mode)
+                            Scraper.overwrite_db(ENTRIES, old_ent, entry.db_query)
+                    print("Execution Completed\n")
+                except:
+                    print("Error: Failed to execute query\n")
+
     def print_booru_engines():
         if len(BOORU_DICT) == 0:
             print("No registered engines\n")
@@ -583,7 +642,7 @@ class Scraper:
             if query == "1": # Add entry
                 print("\nCurrently recognized engines:")
                 Scraper.print_booru_engines()
-                print("Enter a BOORU site base to associate with a key, or enter 0 to cancel: (Ex: https://gelbooru.com/)")
+                print("Enter a BOORU site base to associate with a key, or enter 0 to cancel: (Ex: https://gelbooru.com)")
                 value = input("# ")
                 sys.stdout.flush()
                 if value == "0":
@@ -730,7 +789,7 @@ def main():
         if sys.argv[1] == "-e":
             Scraper.generate_queries()
             Scraper.execute_queries()
-            Scraper.save_entries()
+            # Scraper.save_entries()
     else:
         isExecuting = True
         while(isExecuting):
@@ -782,5 +841,23 @@ def main():
                         Blacklist.print_blacklist()
                     elif query == "0": # Return to previous menu
                         isValidInput = True
+            elif query == "3": # View Scraper Metadata
+                isMoreInput = False
+                while(isMoreInput == False):
+                    print("#############################")
+                    print("#   View metadata:          #")
+                    print("#############################")
+                    print("[1] ")
+                    print("[2] ")
+                    print("[3] ")
+                    print("[0] Previous Menu")
+                    query = input("# ")
+                    if query == "1":
+                        print()
+                    elif query == "0":
+                        isMoreInput = False
+            elif query == "4": # Exectute Scraper
+                Scraper.generate_queries()
+                Scraper.execute_queries()
 
 if __name__ == "__main__":  main()
