@@ -13,7 +13,7 @@ import sys
 
 VERSION = "1.1.0"                                               # Scripts version
 BASE_PATH = "internal"                                          # Root directory for databases
-ENTRIES = os.path.join(BASE_PATH, "query.db")                   # Database for managing internal query managment
+ENTRIES = os.path.join(BASE_PATH, "entry.db")                   # Database for managing internal entry managment
 BLACKLIST = os.path.join(BASE_PATH, "blacklist.db")             # Database for universal blacklist applications (Booru's only)
 CONFIG = os.path.join(BASE_PATH, "config.db")                   # Scraper configuration file
 BATCHFILE = os.path.join(BASE_PATH, "batch_load.txt")           # File for batch loading in links to be automaticly executed on the bots next run 
@@ -28,8 +28,6 @@ ENTRY_DICT = {}                                                 # Mapper for Eng
 ####################################################################################################
 class Entry:
         # Entry initalizer, sets up metadata for a query from either the database or user input @ runtime
-        # TODO: Expand this class to support downloading a users bookmarked favorite(PXV)
-        # NOTE: https://www.pixiv.net/en/users/58453252 [/bookmarks/artworks] 
         def __init__(self, engine, query, lid, lob, rating, mode, db_query):
             self.engine = engine                    # Engine used to execute the query
             self.query = query                      # the query to be executed (TAG)
@@ -216,34 +214,7 @@ class Entry:
                     Scraper.save_db(ENTRIES, db_query, 'a')
             else:
                 print("Unrecognized Engine")
-            # try:
-            #     engine = components[2].split(".")[1]
-            #     if (engine == "pixiv"):
-            #         
-            #     # TODO
-            #     elif (engine in BOORU_DICT.values()):
-            #         print()
-                #     engine = "GBRU" 
-                #     lid = "0"
-                #     metadata = components[3].split("tags=")[1].split("+")
-                #     query = metadata[0]
-                #     if len(metadata) > 1:
-                #         if metadata[1] == "rating:explicit":
-                #             rating = "EXP"
-                #         elif metadata[1] == "rating:sensitive":
-                #             rating = "SEN"
-                #         elif metadata[1] == "rating:general":
-                #             rating = "SFE"
-                #     else:
-                #         rating = "ALL"
-                #     if(Entry.duplicateEntryChecker(engine, query, rating)):
-                #         print("Module already in database, skipping...")
-                #     else:
-                #         Entry(engine, query, lid, lob, rating, mode)
-                #         Scraper.save_entry(engine, query, lid, lob, rating, mode, 'a')
-            # except:
-            #     print("Bad Query, unable to proccess: ", response)
-
+           
         def modify_entry():
             isExecuting = True
             while (isExecuting):
@@ -257,7 +228,7 @@ class Entry:
                 if response == "0":
                     return
                 elif response == "1":
-                    if len(BOORU_DICT) != 0: #TODO add closer to this
+                    if len(BOORU_DICT) != 0:
                         isValidEngine = False
                         while (isValidEngine == False):
                             isValidEngine = True
@@ -518,10 +489,10 @@ class Blacklist:
 ####################################################################################################
 class Scraper:
     def init_scraper():
-        # Install needed dependencies #TODO Uncomment
-        # dependencies = ["gallery-dl", "yt-dlp"]
-        # for package in dependencies:
-        #     subprocess.check_call([sys.executable, "-m", "pip", "install", package], stdout=subprocess.DEVNULL)
+        # Install needed dependencies
+        dependencies = ["gallery-dl", "yt-dlp"]
+        for package in dependencies:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", package], stdout=subprocess.DEVNULL)
         
         # Setup base structure
         if not os.path.exists(BASE_PATH):
@@ -532,16 +503,22 @@ class Scraper:
             with open(CONFIG, 'w') as file:
                 pass
         else:
-            print("Loading configuration...") #TODO
+            print("Loading configuration...")
             with open(CONFIG, 'r') as file:
                 contents = file.read().splitlines()
+            if len(contents) == 0:
+                print("Registering default BOORU engine...")
+                BOORU_DICT["GBU"] = "https://gelbooru.com"
+                ENTRY_DICT["GBU"] = []
+                Scraper.save_db(CONFIG, "GBU|https://gelbooru.com", 'a')
+
             for entry in contents:
                 try:
                     key, val = entry.split("|")
                     BOORU_DICT[key] = val
                     ENTRY_DICT[key] = []
                 except:
-                    print("Error in Configuration file!")
+                    print("Error in configuration file!")
 
         # Register other engines
         ENTRY_DICT["PXV"] = []
@@ -726,6 +703,11 @@ class Scraper:
                         else:
                             print("Key registered to", BOORU_DICT.get(key))
             elif query == "2": # Modify entry
+                # Validation checker
+                if len(BOORU_DICT) == 0:
+                    print("No registered engines to modify")
+                    break
+
                 Scraper.print_booru_engines()
                 isValidInput = False
                 while(isValidInput == False):
@@ -755,6 +737,11 @@ class Scraper:
                     else:
                         print("Key is not registered to a value")
             elif query == "3":
+                # Validation checker
+                if len(BOORU_DICT) == 0:
+                    print("No registered engines to delete")
+                    break
+
                 print("####################################################################")
                 print("# WARNING! DELETING AN ENGINE ALSO DELETES ALL CORRELATED ENTRIES! #")
                 print("####################################################################")
@@ -852,7 +839,7 @@ def main():
     print("Initializing Bot...")
     print("V:", VERSION)
     Scraper.init_scraper()
-    
+
     # Automatic Execution
     if (len(sys.argv) == 2):
         if sys.argv[1] == "-e":
@@ -867,14 +854,12 @@ def main():
             print("[3] View Scraper Metadata")
             print("[4] Exectute Scraper")
             print("[0] Quit")
-            
             query = input("# ")
             if query == "1":
                 # print("#   Scraper Configuration mode:   #")
                 # print("[1] Edit booru engine configuration")
                 print("Entering booru config")
                 Scraper.edit_booru_config()
-
             elif query == "2": # Entry Managment
                 isMoreInput = False
                 while(isMoreInput == False):
