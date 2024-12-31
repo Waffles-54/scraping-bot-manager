@@ -686,16 +686,15 @@ class Scraper:
     def edit_booru_config():
         isExecuting = True
         while(isExecuting):
-            print("[1] Add recognized engine")
-            print("[2] Edit recongized engine")
-            print("[3] Remove recongnized engine")
-            print("[4] Print recongnized engines")
+            print("[1] Add recognized BOORU's")
+            print("[2] Edit recongized BOORU's")
+            print("[3] Remove recongnized BOORU's")
+            print("[4] Print recongnized BOORU's")
             print("[0] Previous menu")
-            
             query = input("# ")
             sys.stdout.flush()
             if query == "1": # Add entry
-                print("\nCurrently recognized engines:")
+                print("\nCurrently recognized BOORU's:")
                 Scraper.print_booru_engines()
                 print("Enter a BOORU site base to associate with a key, or enter 0 to cancel: (Ex: https://gelbooru.com)")
                 value = input("# ")
@@ -745,12 +744,7 @@ class Scraper:
                         if confirm():
                             old_text = old_key + "|" + BOORU_DICT.get(old_key)
                             new_text = new_key + "|" + BOORU_DICT.get(old_key)
-                            with open(CONFIG, 'r+') as file:
-                                content = file.read()
-                                updated_content = content.replace(old_text, new_text)
-                                file.seek(0)
-                                file.write(updated_content)
-                                file.truncate()
+                            Scraper.overwrite_db(CONFIG, old_text, new_text)
                             isValidInput = True
                         else:
                             print("\nScrapping entry...")
@@ -764,7 +758,26 @@ class Scraper:
                 print("####################################################################")
                 print("# WARNING! DELETING AN ENGINE ALSO DELETES ALL CORRELATED ENTRIES! #")
                 print("####################################################################")
-                print("TODO") #TODO
+                Scraper.print_booru_engines()
+                isValidInput = False
+                while(isValidInput == False):
+                    print("Select Key to delete, or enter 0 to cancel")
+                    to_delete = input("# ")
+                    sys.stdout.flush()
+                    if to_delete in BOORU_DICT.keys():
+                        print("WARNING: DELETING A BOORU ENGINE WILL DELETE ALL RELATED ENTRIES!")
+                        if confirm():
+                            for entry in ENTRY_DICT.get(to_delete):
+                                Scraper.overwrite_db(ENTRIES, entry.db_query, "")
+                            conf = to_delete + "|" + BOORU_DICT.get(to_delete)
+                            del BOORU_DICT[to_delete]
+                            del ENTRY_DICT[to_delete]
+                            Scraper.overwrite_db(CONFIG, conf, "")
+                            print("Engine and related entries deleted")
+                            isValidInput = True
+                    elif to_delete == "0":
+                        print("Unrecognized engine")
+                        isValidInput = True
             elif query == "4":
                 Scraper.print_booru_engines()
             elif query == "0":
@@ -848,10 +861,8 @@ def main():
     else:
         isExecuting = True
         while(isExecuting):
-            print("######################")
             print("#   Enter Command:   #")
-            print("######################")
-            print("[1] Configure Scraper")
+            print("[1] Configure BOORU engines") # Only supports 1 thing right now
             print("[2] Entry Managment")
             print("[3] View Scraper Metadata")
             print("[4] Exectute Scraper")
@@ -859,22 +870,20 @@ def main():
             
             query = input("# ")
             if query == "1":
-                print("###################################")
-                print("#   Scraper Configuration mode:   #")
-                print("###################################")
-                # print("[1] Edit booru engine configuration") #TODO
+                # print("#   Scraper Configuration mode:   #")
+                # print("[1] Edit booru engine configuration")
+                print("Entering booru config")
                 Scraper.edit_booru_config()
 
             elif query == "2": # Entry Managment
                 isMoreInput = False
                 while(isMoreInput == False):
-                    print("#############################")
-                    print("#   Entry Managment mode:   #")
-                    print("#############################")
+                    print("#   Entry settings   #")
                     print("[1] Add Entry")
                     print("[2] Modify Entry")
                     print("[3] Delete Entry")
                     print("[4] View Entries")
+                    print("#   Blacklist settings   #")
                     print("[5] Add Blacklist tags (BOORU Only)")
                     print("[6] Remove Blacklist tags (BOORU Only)")
                     print("[7] View Blacklist")
@@ -899,17 +908,19 @@ def main():
             elif query == "3": # View Scraper Metadata
                 isMoreInput = False
                 while(isMoreInput == False):
-                    print("#############################")
-                    print("#   View metadata:          #")
-                    print("#############################")
-                    print("[1] ")
-                    print("[2] ")
-                    print("[3] ")
+                    print("#   View metadata   #")
+                    print("[1] Print Entries")
+                    print("[2] Print Blacklist")
+                    print("[3] Print BOORU config")
                     print("[0] Previous Menu")
                     query = input("# ")
-                    if query == "1":
-                        print()
-                    elif query == "0":
+                    if query == "1": # Print entries
+                        Entry.print_entries()
+                    elif query == "2": # print blacklist
+                        Blacklist.print_blacklist()
+                    elif query == "3": # Prinr BOORU config
+                        Scraper.print_booru_engines()
+                    elif query == "0": # Previous Menu
                         isMoreInput = False
             elif query == "4": # Exectute Scraper
                 Scraper.generate_queries()
