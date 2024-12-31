@@ -73,6 +73,7 @@ cd /path/to/bot/ && python3 media-bot.py -e
 See the [gallery-dl](https://github.com/mikf/gallery-dl?tab=readme-ov-file#id25) section about configuring OAuth for Pixiv & Deviantart downloads
 
 ## U.I Structure Overview
+```
 [1] Configure BOORU engines
     [1] Add recognized BOORU's
     [2] Edit recongized BOORU's
@@ -95,6 +96,7 @@ See the [gallery-dl](https://github.com/mikf/gallery-dl?tab=readme-ov-file#id25)
     [0] Previous Menu
 [4] Exectute Scraper
 [0] Quit
+```
 
 ## File Structure
 - gallery-dl            Download directory for image scraper
