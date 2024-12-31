@@ -110,10 +110,10 @@ python3 /path/to/bot/media-bot.py -e
 
 ## Future Goals
 - [x] Initial Release (2024/12/24)
-- [] Implementation of more engines (Selectable Booru's, Deviantart, X, Blueskies, etc.)
+- [-] Implementation of more engines (Selectable Booru's, Deviantart, X, Blueskies, etc.) (Partial: 2024/12/30)
 - [] Implementation of video scraping
-- [] Better database access - Better Read/Write implementation
-- [] Refactor codebase for better efficiency & Cleaner Code
+- [x] Better database access - Better Read/Write implementation (2024/12/30)
+- [x] Refactor codebase for better efficiency & Cleaner Code (2024/12/30)
 - [] Setup debugging logger
 
 ## Credits

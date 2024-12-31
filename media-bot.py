@@ -1,7 +1,6 @@
 #####################################################################
 # OP-3e: Media Scraping Bot Project                                 #
 # Written by Alice C. G.                                            #
-# V: 1.0.1                                                          #
 # Follow local laws and websites guidelines when using this scraper #
 #####################################################################
 
@@ -12,6 +11,7 @@ import os
 import subprocess
 import sys
 
+VERSION = "1.1.0"                                               # Scripts version
 BASE_PATH = "internal"                                          # Root directory for databases
 ENTRIES = os.path.join(BASE_PATH, "query.db")                   # Database for managing internal query managment
 BLACKLIST = os.path.join(BASE_PATH, "blacklist.db")             # Database for universal blacklist applications (Booru's only)
@@ -39,7 +39,7 @@ class Entry:
             self.mode = mode                        # What type of query is being executed (Tag, User, etc.)
             self.db_query = db_query                # Database representation of the query
             self.generated_query = ""               # Query for execution (built from the rest of the modules metadata)
-            ENTRY_DICT[engine].append(self) # Append this module to the mapper
+            ENTRY_DICT[engine].append(self)         # Append this module to the mapper
 
         def add_entry():
             isMoreModules, isVaildInput = True, False
@@ -162,43 +162,87 @@ class Entry:
         def add_entry_from_query(response):
             engine, query, lob, rating, lid, mode = [""] * 6
             components = response.split("/")
-            try:
-                engine = components[2].split(".")[1]
-                if (engine == "pixiv"):
-                    engine = "PXV"
-                    mode = components[4]
-                    if (mode == "users"):
-                        mode = "USR"
-                        query = components[5]
-                    elif (mode == "tags"):
-                        mode = "TAG"
-                        query = components[5]
-                    if(Entry.duplicateEntryChecker(engine, query, rating)):
-                        print("Module already in database, skipping...")
-                    else:
-                        Entry(engine, query, lid, lob, rating, mode)
-                        Scraper.save_entry(engine, query, lid, lob, rating, mode, 'a')
-                elif (engine == "gelbooru"):
-                    engine = "GBRU" 
-                    lid = "0"
-                    metadata = components[3].split("tags=")[1].split("+")
-                    query = metadata[0]
-                    if len(metadata) > 1:
-                        if metadata[1] == "rating:explicit":
-                            rating = "EXP"
-                        elif metadata[1] == "rating:sensitive":
-                            rating = "SEN"
-                        elif metadata[1] == "rating:general":
+            if len(components) < 3:
+                raise("Bad entry")
+            web_base = "https://" + components[2]
+            if web_base in BOORU_DICT.values():
+                tag_base = components[3].split("=")[3]
+                lid = 0
+                rating = "ALL"
+                extracted = tag_base.split("+")
+                for element in extracted:
+                    if len(element.split("id%3a>")) > 1:
+                        lid = int(element.split("id%3a>")[1])
+                    elif len(element.split("rating%3a")) > 1:
+                        element = element.split("rating%3a")
+                        if element[1] == "general":
                             rating = "SFE"
+                        elif element[1] == "sensitive":
+                            rating = "SEN"
+                        elif element[1] == "explicit":
+                            rating = "EXP"
+                        else:
+                            rating = "ALL"
+                    elif element[0] == '-':
+                        lob += element[1:] + ' '
                     else:
-                        rating = "ALL"
-                    if(Entry.duplicateEntryChecker(engine, query, rating)):
-                        print("Module already in database, skipping...")
-                    else:
-                        Entry(engine, query, lid, lob, rating, mode)
-                        Scraper.save_entry(engine, query, lid, lob, rating, mode, 'a')
-            except:
-                print("Bad Query, unable to proccess: ", response)
+                        query = element
+                # Reverse determine engine Code
+                for key, value in BOORU_DICT.items():
+                    if web_base == value:
+                        engine = key
+                        break
+                mode = "TAG"
+                if Entry.duplicateEntryChecker(engine, query, rating):
+                    print("Duplicate Entry Detected, skipping...")
+                else:
+                    db_query = Scraper.generate_db_ent(engine, query, lid, lob, rating, mode)
+                    Entry(engine, query, lid, lob, rating, mode, db_query)
+                    Scraper.save_db(ENTRIES, db_query, 'a')
+            elif web_base == "https://www.pixiv.net":
+                engine = "PXV"
+                mode = components[4]
+                if (mode == "users"):
+                    mode = "USR"
+                    query = components[5]
+                elif (mode == "tags"):
+                    mode = "TAG"
+                    query = components[5]
+                if(Entry.duplicateEntryChecker(engine, query, rating)):
+                    print("Module already in database, skipping...")
+                else:
+                    db_query = Scraper.generate_db_ent(engine, query, lid, lob, rating, mode)
+                    Entry(engine, query, lid, lob, rating, mode, db_query)
+                    Scraper.save_db(ENTRIES, db_query, 'a')
+            else:
+                print("Unrecognized Engine")
+            # try:
+            #     engine = components[2].split(".")[1]
+            #     if (engine == "pixiv"):
+            #         
+            #     # TODO
+            #     elif (engine in BOORU_DICT.values()):
+            #         print()
+                #     engine = "GBRU" 
+                #     lid = "0"
+                #     metadata = components[3].split("tags=")[1].split("+")
+                #     query = metadata[0]
+                #     if len(metadata) > 1:
+                #         if metadata[1] == "rating:explicit":
+                #             rating = "EXP"
+                #         elif metadata[1] == "rating:sensitive":
+                #             rating = "SEN"
+                #         elif metadata[1] == "rating:general":
+                #             rating = "SFE"
+                #     else:
+                #         rating = "ALL"
+                #     if(Entry.duplicateEntryChecker(engine, query, rating)):
+                #         print("Module already in database, skipping...")
+                #     else:
+                #         Entry(engine, query, lid, lob, rating, mode)
+                #         Scraper.save_entry(engine, query, lid, lob, rating, mode, 'a')
+            # except:
+            #     print("Bad Query, unable to proccess: ", response)
 
         def modify_entry():
             isExecuting = True
@@ -474,8 +518,7 @@ class Blacklist:
 ####################################################################################################
 class Scraper:
     def init_scraper():
-        # Install needed dependencies
-        #TODO uncomment this
+        # Install needed dependencies #TODO Uncomment
         # dependencies = ["gallery-dl", "yt-dlp"]
         # for package in dependencies:
         #     subprocess.check_call([sys.executable, "-m", "pip", "install", package], stdout=subprocess.DEVNULL)
@@ -489,7 +532,7 @@ class Scraper:
             with open(CONFIG, 'w') as file:
                 pass
         else:
-            print("Loading configuration file...") #TODO
+            print("Loading configuration...") #TODO
             with open(CONFIG, 'r') as file:
                 contents = file.read().splitlines()
             for entry in contents:
@@ -505,10 +548,10 @@ class Scraper:
         ENTRY_DICT["DVA"] = []
         ENTRY_DICT["OTH"] = []
 
-        # Setup Log file
-        if not os.path.isfile(LOG_ARCHIVE):
-            with open(LOG_ARCHIVE, 'w') as file:
-                pass
+        # Setup Log file [UNUSED]
+        # if not os.path.isfile(LOG_ARCHIVE):
+        #     with open(LOG_ARCHIVE, 'w') as file:
+        #         pass
         
         # Load Entries from the query database
         try:
@@ -524,17 +567,20 @@ class Scraper:
                 print("Database updated!", len(contents.split('\n')) - 1, "queries adjusted")
 
             # Load queries into program
+            print("Loading entries...")
             queries = contents.split('\n')
             for query in queries:
                 if query == '':
                     break
                 try:
                     fragments = query.split('|')
+                    Scraper.validate_entry(fragments)
                     fragments.append(query)
                     Entry(*fragments) # Generate entries from the tokenized database entries
-                except:
-                    print("Bad Entry in database:", query)
-                    # print("Removing bad entry...") #TODO
+                except Exception as e:
+                    print(e.args[0], ":", query)
+                    print("Deleting bad entry...")
+                    Scraper.overwrite_db(ENTRIES, query, "")
         except FileNotFoundError:
             print("Creating query database...")
             with open(ENTRIES, 'w') as file:
@@ -559,6 +605,15 @@ class Scraper:
             Entry.add_entry_from_query(query)
         with open(BATCHFILE, 'w') as file:
             pass
+
+    def validate_entry(fragments):
+        if len(fragments) < 6:
+            raise Exception("Invalid fragmentation")
+        if fragments[0] not in ENTRY_DICT.keys():
+            raise Exception("Unrecognized Engine")
+        if fragments[5] not in ["USR", "TAG"]:
+            raise Exception("Invalid mode identifier")
+
 
     def generate_queries():
         # Generate Queries for dynamic engines
@@ -782,6 +837,7 @@ def confirm():
 def main():
     # Setup Phase
     print("Initializing Bot...")
+    print("V:", VERSION)
     Scraper.init_scraper()
     
     # Automatic Execution
@@ -789,7 +845,6 @@ def main():
         if sys.argv[1] == "-e":
             Scraper.generate_queries()
             Scraper.execute_queries()
-            # Scraper.save_entries()
     else:
         isExecuting = True
         while(isExecuting):
