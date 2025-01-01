@@ -606,8 +606,7 @@ class Scraper:
                     if entry.rating == "SEN":
                         query += "+rating:questionable"
                     if entry.rating == "EXP":
-                        if entry.engine == "GBRU":
-                            query += "+rating:explicit"
+                        query += "+rating:explicit"
                     for element in GLOBAL_BLACKLIST + entry.lob.split(" "):
                         if element != '':
                             query += "+-" + element
