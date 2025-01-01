@@ -724,9 +724,18 @@ class Scraper:
                         print("###########################")
                         if confirm():
                             old_text = old_key + "|" + BOORU_DICT.get(old_key)
-                            new_text = new_key + "|" + BOORU_DICT.get(old_key)
+                            new_text = new_key + "|" + BOORU_DICT.get(old_key) + "\n"
+                            ENTRY_DICT[new_key] = ENTRY_DICT[old_key]
+                            BOORU_DICT[new_key] = BOORU_DICT[old_key]
+                            for entry in ENTRY_DICT[old_key]:
+                                new_query = Scraper.generate_db_ent(new_key, entry.query, entry.lid, entry.lob, entry.rating, entry.mode)
+                                Scraper.overwrite_db(ENTRIES, entry.db_query, new_query)
                             Scraper.overwrite_db(CONFIG, old_text, new_text)
+                            del ENTRY_DICT[old_key]
+                            del BOORU_DICT[old_key]
+
                             isValidInput = True
+
                         else:
                             print("\nScrapping entry...")
 
