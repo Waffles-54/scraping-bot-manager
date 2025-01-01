@@ -874,8 +874,8 @@ def main():
                 print("Entering booru config")
                 Scraper.edit_booru_config()
             elif query == "2": # Entry Managment
-                isMoreInput = False
-                while(isMoreInput == False):
+                isMoreInput = True
+                while(isMoreInput == True):
                     print("###   Entry settings   ###")
                     print("[1] Add Entry")
                     print("[2] Modify Entry")
@@ -902,10 +902,10 @@ def main():
                     elif query == "7": # View Global Blacklist
                         Blacklist.print_blacklist()
                     elif query == "0": # Return to previous menu
-                        isMoreInput = True
+                        isMoreInput = False
             elif query == "3": # View Scraper Metadata
-                isMoreInput = False
-                while(isMoreInput == False):
+                isMoreInput = True
+                while(isMoreInput == True):
                     print("#   View metadata   #")
                     print("[1] Print Entries")
                     print("[2] Print Blacklist")
