@@ -111,14 +111,14 @@ See the [gallery-dl](https://github.com/mikf/gallery-dl?tab=readme-ov-file#id25)
 
 ## Future Goals
 - [x] Initial Release (2024/12/24)
-- [-] Implementation of more engines (Selectable Booru's, Deviantart, X, Blueskies, Other) (Partial: 2024/12/30)
-- [] Implementation of video scraping
-- [] Implement GIF processing for pixiv downloads
-- [] Localize to Japanese
+- [ ] Implementation of more engines (Selectable Booru's, Deviantart, X, Blueskies, Other) (Partial: 2024/12/30)
+- [ ] Implementation of video scraping
+- [ ] Implement GIF processing for pixiv downloads
+- [ ] Localize to Japanese
 - [x] Better database access - Better Read/Write implementation (2024/12/30)
 - [x] Refactor codebase for better efficiency & Cleaner Code (2024/12/30)
-- [] Setup debugging logger
-- [] Enhance configuration system (Automatic compression, gif compression, etc.)
+- [ ] Setup debugging logger
+- [ ] Enhance configuration system (Automatic compression, gif compression, etc.)
 
 ## Credits
 This program uses two external libraries to form the backend of the scraper, check below for sources.

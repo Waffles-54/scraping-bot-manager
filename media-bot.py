@@ -71,7 +71,9 @@ class Entry:
                                     rating = Entry.get_rating()
                                     
                                     if Entry.duplicateEntryChecker(engine, query, rating) == True:
-                                        print("Entry allready exists")
+                                        print("Entry already exists")
+                                        query = None
+
                                     else:
                                         print("\nInput Local blacklists seperated by a space (Press enter for None):")
                                         lob = input("# ")
@@ -85,6 +87,7 @@ class Entry:
                                         mode = "TAG"
                                 else:
                                     print("Invalid Key!")
+                                    isValidEngine = False
                         else:
                             print("No BOORU engines registered, please configure the BOORU registry (Configure Scraper)")
                     elif response == "2": # Pixiv Mode
@@ -455,18 +458,19 @@ class Entry:
 ####################################################################################################
 class Blacklist:
     def add_blacklist():
+        Blacklist.print_blacklist()
         print("Enter globaly applied blacklisted tags to be added to the database (seperate with spaces):")
         response = input("# ")
         tokens = response.split(' ')
         with open(BLACKLIST, 'a') as file:
             for token in tokens:
-                if (Scraper.duplicateBlacklistChecker(token) == False):
+                if (Blacklist.duplicateBlacklistChecker(token) == False):
                     file.write(token + "|")
                 else:
                     print(token + " is already registered to the global blacklist")
 
     def remove_blacklist():
-        Scraper.print_blacklist()
+        Blacklist.print_blacklist()
         print("Enter Entries to remove, seperate by spaces:")
         response = input("# ").split(' ')
         for tokens in response:
@@ -564,6 +568,7 @@ class Scraper:
                 pass
         
         # Load Global Blacklist Database
+        global GLOBAL_BLACKLIST
         try:
             with open(BLACKLIST, 'r') as file:
                 GLOBAL_BLACKLIST = file.read().split("|")
@@ -606,8 +611,7 @@ class Scraper:
                     if entry.rating == "SEN":
                         query += "+rating:questionable"
                     if entry.rating == "EXP":
-                        if entry.engine == "GBRU":
-                            query += "+rating:explicit"
+                        query += "+rating:explicit"
                     for element in GLOBAL_BLACKLIST + entry.lob.split(" "):
                         if element != '':
                             query += "+-" + element
@@ -725,9 +729,18 @@ class Scraper:
                         print("###########################")
                         if confirm():
                             old_text = old_key + "|" + BOORU_DICT.get(old_key)
-                            new_text = new_key + "|" + BOORU_DICT.get(old_key)
+                            new_text = new_key + "|" + BOORU_DICT.get(old_key) + "\n"
+                            ENTRY_DICT[new_key] = ENTRY_DICT[old_key]
+                            BOORU_DICT[new_key] = BOORU_DICT[old_key]
+                            for entry in ENTRY_DICT[old_key]:
+                                new_query = Scraper.generate_db_ent(new_key, entry.query, entry.lid, entry.lob, entry.rating, entry.mode)
+                                Scraper.overwrite_db(ENTRIES, entry.db_query, new_query)
                             Scraper.overwrite_db(CONFIG, old_text, new_text)
+                            del ENTRY_DICT[old_key]
+                            del BOORU_DICT[old_key]
+
                             isValidInput = True
+
                         else:
                             print("\nScrapping entry...")
 
@@ -863,12 +876,12 @@ def main():
             elif query == "2": # Entry Managment
                 isMoreInput = False
                 while(isMoreInput == False):
-                    print("#   Entry settings   #")
+                    print("###   Entry settings   ###")
                     print("[1] Add Entry")
                     print("[2] Modify Entry")
                     print("[3] Delete Entry")
                     print("[4] View Entries")
-                    print("#   Blacklist settings   #")
+                    print("###   Blacklist settings   ###")
                     print("[5] Add Blacklist tags (BOORU Only)")
                     print("[6] Remove Blacklist tags (BOORU Only)")
                     print("[7] View Blacklist")
@@ -880,13 +893,13 @@ def main():
                         Entry.modify_entry()
                     elif query == "3": # Delete Entry
                         Entry.remove_entry()
-                    elif query == "4": # View Entries
+                    elif query == "4": # View Blacklist
                         Entry.print_entries()
-                    elif query == "6": # Add to Gloabl Blacklist
+                    elif query == "5": # Add to Gloabl Blacklist
                         Blacklist.add_blacklist()
-                    elif query == "7": # Remove from Global Blacklist
+                    elif query == "6": # Remove from Global Blacklist
                         Blacklist.remove_blacklist()
-                    elif query == "8": # View Global Blacklist
+                    elif query == "7": # View Global Blacklist
                         Blacklist.print_blacklist()
                     elif query == "0": # Return to previous menu
                         isMoreInput = True
