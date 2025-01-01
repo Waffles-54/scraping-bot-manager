@@ -902,7 +902,7 @@ def main():
                     elif query == "7": # View Global Blacklist
                         Blacklist.print_blacklist()
                     elif query == "0": # Return to previous menu
-                        isValidInput = True
+                        isMoreInput = True
             elif query == "3": # View Scraper Metadata
                 isMoreInput = False
                 while(isMoreInput == False):
