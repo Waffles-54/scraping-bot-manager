@@ -889,7 +889,7 @@ def main():
                     elif query == "8": # View Global Blacklist
                         Blacklist.print_blacklist()
                     elif query == "0": # Return to previous menu
-                        isValidInput = True
+                        isMoreInput = True
             elif query == "3": # View Scraper Metadata
                 isMoreInput = False
                 while(isMoreInput == False):
@@ -910,5 +910,8 @@ def main():
             elif query == "4": # Exectute Scraper
                 Scraper.generate_queries()
                 Scraper.execute_queries()
+            elif query == "0":
+                print("Shutting down...")
+                isExecuting = False
 
 if __name__ == "__main__":  main()
