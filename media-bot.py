@@ -71,7 +71,9 @@ class Entry:
                                     rating = Entry.get_rating()
                                     
                                     if Entry.duplicateEntryChecker(engine, query, rating) == True:
-                                        print("Entry allready exists")
+                                        print("Entry already exists")
+                                        query = None
+
                                     else:
                                         print("\nInput Local blacklists seperated by a space (Press enter for None):")
                                         lob = input("# ")
@@ -85,6 +87,7 @@ class Entry:
                                         mode = "TAG"
                                 else:
                                     print("Invalid Key!")
+                                    isValidEngine = False
                         else:
                             print("No BOORU engines registered, please configure the BOORU registry (Configure Scraper)")
                     elif response == "2": # Pixiv Mode
