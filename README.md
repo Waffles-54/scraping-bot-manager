@@ -73,6 +73,7 @@ cd /path/to/bot/ && python3 media-bot.py -e
 See the [gallery-dl](https://github.com/mikf/gallery-dl?tab=readme-ov-file#id25) section about configuring OAuth for Pixiv & Deviantart downloads
 
 ## U.I Structure Overview
+```
 [1] Configure BOORU engines
     [1] Add recognized BOORU's
     [2] Edit recongized BOORU's
@@ -95,6 +96,7 @@ See the [gallery-dl](https://github.com/mikf/gallery-dl?tab=readme-ov-file#id25)
     [0] Previous Menu
 [4] Exectute Scraper
 [0] Quit
+```
 
 ## File Structure
 - gallery-dl            Download directory for image scraper
@@ -109,14 +111,14 @@ See the [gallery-dl](https://github.com/mikf/gallery-dl?tab=readme-ov-file#id25)
 
 ## Future Goals
 - [x] Initial Release (2024/12/24)
-- [-] Implementation of more engines (Selectable Booru's, Deviantart, X, Blueskies, Other) (Partial: 2024/12/30)
-- [] Implementation of video scraping
-- [] Implement GIF processing for pixiv downloads
-- [] Localize to Japanese
+- [ ] Implementation of more engines (Selectable Booru's, Deviantart, X, Blueskies, Other) (Partial: 2024/12/30)
+- [ ] Implementation of video scraping
+- [ ] Implement GIF processing for pixiv downloads
+- [ ] Localize to Japanese
 - [x] Better database access - Better Read/Write implementation (2024/12/30)
 - [x] Refactor codebase for better efficiency & Cleaner Code (2024/12/30)
-- [] Setup debugging logger
-- [] Enhance configuration system (Automatic compression, gif compression, etc.)
+- [ ] Setup debugging logger
+- [ ] Enhance configuration system (Automatic compression, gif compression, etc.)
 
 ## Credits
 This program uses two external libraries to form the backend of the scraper, check below for sources.
