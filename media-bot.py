@@ -637,7 +637,21 @@ class Scraper:
             for entry in entries:
                 print("Downloading: \n" + entry.generated_query)
                 try:
-                    resCapture = subprocess.run(["gallery-dl", "--download-archive", DOWNLOAD_ARCHIVES, entry.generated_query], capture_output=True, text=True)
+                    if engine in BOORU_DICT:
+                        path = os.path.join("download", "booru", entry.rating, entry.query)
+                    elif engine == "PXV":
+                        path = os.path.join("download", "pixiv", entry.query)
+
+                    resCapture = subprocess.run(
+                        [
+                            "gallery-dl", 
+                            "--download-archive", DOWNLOAD_ARCHIVES, 
+                            "--directory",  path, 
+                            entry.generated_query
+                        ], 
+                        capture_output=True, 
+                        text=True
+                    )
                     if resCapture.stdout != "":
                         # print(resCapture.stdout.splitlines()[0].split('id:>')[1].split('_')[0].split(" ")[0])
                         with open(DOWNLOAD_ARCHIVES, 'a') as file:
