@@ -10,8 +10,11 @@
 import os
 import subprocess
 import sys
+import zipfile
+import shutil
+# from PIL import Image
 
-VERSION = "1.1.0"                                               # Scripts version
+VERSION = "1.2.0"                                               # Scripts version
 BASE_PATH = "internal"                                          # Root directory for databases
 ENTRIES = os.path.join(BASE_PATH, "entry.db")                   # Database for managing internal entry managment
 BLACKLIST = os.path.join(BASE_PATH, "blacklist.db")             # Database for universal blacklist applications (Booru's only)
@@ -47,14 +50,12 @@ class Entry:
                     print("\nEnter engine # to use, or press 0 to return to previous menu")
                     print("[1] Booru site")
                     print("[2] Pixiv")
-                    # print("[3] Deviantart")
-                    print("[4] Manual mode (direct query entry)")
+                    print("[3] Manual mode (direct query entry)")
+                    # print("[4] Deviantart")
                     print("[0] Exit Entry mode")
                     response = input("#: ")
                     sys.stdout.flush()
-                    if response == "0":
-                        return
-                    elif response == "1": # BOORU Mode
+                    if response == "1": # BOORU Mode
                         if len(BOORU_DICT) != 0:
                             isValidEngine = False
                             while (isValidEngine == False):
@@ -62,9 +63,9 @@ class Entry:
                                 print("\nSelect BOORU engine, or enter 0 to return to previous menu:")
                                 Scraper.print_booru_engines()
                                 engine = input("# ")
-                                if engine == "0":
+                                if engine == "0":  # Return to previous menu
                                     continue
-                                elif engine in BOORU_DICT.keys():
+                                elif engine in BOORU_DICT.keys(): # Entry mode for BOORU's
                                     print("\nInput search query (Do not input blacklist identifiers, currently supports 1 query):")
                                     query = input("# ")
                                     sys.stdout.flush()
@@ -73,7 +74,6 @@ class Entry:
                                     if Entry.duplicateEntryChecker(engine, query, rating) == True:
                                         print("Entry already exists")
                                         query = None
-
                                     else:
                                         print("\nInput Local blacklists seperated by a space (Press enter for None):")
                                         lob = input("# ")
@@ -122,12 +122,12 @@ class Entry:
                                         query.remove(entry)
                                 else:
                                     query.remove(entry)
-                    # elif response == "3": # Deviantart Mode
-                    elif response == "4":
-                        print("Insert web query (or press 0 to return to the previous menu)")
-                        response = input("# ")
-                        if response != "0":
-                            Entry.add_entry_from_query(response)
+                    elif response == "3":
+                        print("\nInsert web query (or press 0 to return to the previous menu)")
+                        query = input("# ").lstrip("/ ")
+                        if query != "0":
+                            engine = "OTH"
+                            lid, lob, rating, mode = [""] * 4
                     else:
                         return
                     
@@ -158,6 +158,8 @@ class Entry:
                                 Scraper.save_db(ENTRIES ,db_query, 'a')
                         else:
                             print("Scrapping entry...")
+                    elif response == "0": # Return to previous menu
+                        return
                     isVaildInput = False # Reset
 
         def add_entry_from_query(response):
@@ -321,113 +323,133 @@ class Entry:
                     print("No BOORU engines registered, please configure the BOORU registry (Configure Scraper)")
 
         def remove_entry():
-            isVaildInput = False
-            engineSelection = ""
-            while (isVaildInput == False):
-                print("Select Engine:")
+            isMoreEntries = True
+            while (isMoreEntries == True):
+                print("\nSelect Engine:")
                 print("[1] Booru Engine")
                 print("[2] Pixiv Engine")
                 print("[3] Other Engine")
                 print("[0] Previous Menu")
-                isVaildInput = True
                 response = input("#: ")
                 sys.stdout.flush()
-                if response == "0":
-                    return
-                elif response == "1":
+                if response == "1":
                     # Print Availible BOORU Engines
-                    for key, value in BOORU_DICT.items():
-                        print(key, "|", value)
-                        isValidSelection = False
+                    print("\nSelect BOORU engine, or enter 0 to return to previous menu")
+                    Scraper.print_booru_engines()
+                    
                     # Select BOORU engine to remove from
-                    isVaildEngine = False
-                    while (isVaildEngine == False):
-                        print("Select engine to remove from:")
-                        engineSelection = input("# ")
-                        isVaildEngine = True if engineSelection in BOORU_DICT else False
+                    isValidInput = False
+                    while (isValidInput == False):
+                        engine = input("# ").lstrip(" ")
+                        if engine in ENTRY_DICT.keys():
+                            print("")
+                            Entry.print_entries(engine)
+                            print("\nEnter queries to delete, seperate with spaces")
+                            entries = input("# ").lstrip(" ")
+                            entries = entries.split(" ")
+                            filtered_entries = []
+                            for entry in ENTRY_DICT[engine]:
+                                if entry.query not in entries:
+                                    filtered_entries.append(entry)
+                                else:
+                                    ent_db = entry.db_query
+                                    Scraper.overwrite_db(ENTRIES, ent_db, "")
+                            ENTRY_DICT[engine] = filtered_entries
+                            isValidInput = True
                 elif response == "2":
-                    engineSelection = "PXV"
+                    engine = "PXV"
+                    Entry.print_entries(engine)
+                    print("\nEnter queries to delete, seperate with spaces")
+                    entries = input("# ").lstrip(" ")
+                    entries = entries.split(" ")
+                    filtered_entries = []
+                    for entry in ENTRY_DICT[engine]:
+                        if entry.query not in entries:
+                            filtered_entries.append(entry)
+                        else:
+                            ent_db = entry.db_query
+                            Scraper.overwrite_db(ENTRIES, ent_db, "")
+                    ENTRY_DICT[engine] = filtered_entries
+                    isValidInput = True
                 elif response == "3":
-                    engineSelection = "OTH"
-                else:
-                    isVaildInput = False
+                    engine = "OTH"
+                    print("\nOther QUERIES")
+                    dict_entries = ENTRY_DICT.get(engine)
+                    for i in range(len(dict_entries)):
+                        print("\nIndex:", i+1)
+                        print("QUERY:           ", dict_entries[i].query)
 
-                entries = ENTRY_DICT.get(engineSelection)
-                for i in range(len(entries)):
-                    id = "[" + str(i) + "]"
-                    print(id, entries[i].query)
-
+                    rangeSel = "\nSelect Index to delete: [" + "1, " + str(len(dict_entries)) + "] or ALL to delete all entries, or 0 to cancel"
+                    isValidInput = False
+                    while(isValidInput == False):
+                        try:
+                            print(rangeSel)
+                            sel = int(input("# "))
+                            if sel in range(1, len(dict_entries) + 1):
+                                print("Entry Selected:\n", dict_entries[sel - 1].query)
+                                if confirm():
+                                    ent = dict_entries[sel - 1].db_query
+                                    Scraper.overwrite_db(ENTRIES, ent, "")
+                                    del dict_entries[sel - 1]
+                                    print("Entry deleted...")
+                                    isValidInput = True
+                            elif sel == 0:
+                                isValidInput = True
+                            else:
+                                print("Invalid selection...")
+                        except:
+                            print("Invalid selection...")
+                elif response == "0":
+                    isMoreEntries = False
+                
+        def print_entries(engine=None):
+            if engine == None:
                 isVaildInput = False
                 while (isVaildInput == False):
-                    print("SELECT MODULE ID: [ 0, ", len(entries) - 1, "]")
+                    print("\nSelect Engine:")
+                    print("[1] Booru Entries")
+                    print("[2] Pixiv Entries")
+                    print("[3] Other Entries")
+                    print("[0] Previous Menu")
+                    response = input("#: ")
+                    sys.stdout.flush()
+
                     isVaildInput = True
-                    try:
-                        response = int(input("# "))
-                        sys.stdout.flush()
-                        if (response >= 0 and response < len(entries)):
-                            entry = entries[response]
-                            print("Deleting Entry #", str(response))
-                            print("Engine: ", entry.engine)
-                            print("Query:  ", entry.query)
-                            print("Mode:   ", entry.mode)
-                            if confirm():
-                                print("Deleting entry...")
-                                old_ent = entry.db_query
-                                Scraper.overwrite_db(ENTRIES, old_ent, "")
-                                entries.remove(entry)
-                            else:
-                                print("Scrappiing Command...")
-                                isVaildInput = False
+                    if response == "0":
+                        return
+                    elif response == "1": # Booru
+                        if len(BOORU_DICT) != 0:
+                            isValidEngine = False
+                            while (isValidEngine == False):
+                                isValidEngine = True
+                                print("\nSelect BOORU engine, or enter 0 to return to previous menu:")
+                                Scraper.print_booru_engines()
+                                engine = input("# ")
+                                if engine == "0":
+                                    continue
+                                elif engine in ENTRY_DICT.keys():
+                                    Entry.print_entries(engine)
+                                else:
+                                    isVaildInput = False
                         else:
-                            isVaildInput = False
-                    except:
-                        isVaildInput = False
-
-        def print_entries():
-            isVaildInput = False
-            while (isVaildInput == False):
-                print("\nSelect Engine:")
-                print("[1] Booru Entries")
-                print("[2] Pixiv Entries")
-                print("[3] Other Entries")
-                print("[0] Previous Menu")
-                response = input("#: ")
-                sys.stdout.flush()
-
-                isVaildInput = True
-                if response == "0":
-                    return
-                elif response == "1": # Booru
-                    if len(BOORU_DICT) != 0:
-                        isValidEngine = False
-                        while (isValidEngine == False):
-                            isValidEngine = True
-                            print("\nSelect BOORU engine, or enter 0 to return to previous menu:")
-                            Scraper.print_booru_engines()
-                            engine = input("# ")
-                            if engine == "0":
-                                continue
-                            elif engine in ENTRY_DICT.keys():
-                                site = BOORU_DICT.get(engine)
-                                print("ENGINE:             ", site, "[", engine, "]\n")
-                                for entry in ENTRY_DICT.get(engine):
-                                    print("QUERY:           ", entry.query)
-                                    print("MODE:            ", entry.mode)
-                                    print("LOCAL BLACKLIST: ", entry.lob)
-                            else:
-                                isVaildInput = False
-                    else:
-                        print("No BOORU engines registered, please configure the BOORU registry (Configure Scraper)")
-                elif response == "2": # Pixiv
-                    print("ENGINE:         ", "https://www.pixiv.net/en/ [ PXV ]\n")
-                    for entry in ENTRY_DICT["PXV"]:
-                        print("QUERY:           ", entry.query)
-                        print("MODE:            ", entry.mode, "\n")
-                        if entry.mode == "USR":
-                            print("Rating:            ", entry.rating)
-                elif response == "3": # Other
-                    for entry in ENTRY_DICT["OTH"]:
-                        print("QUERY:           ", entry.query)
+                            print("No BOORU engines registered, please configure the BOORU registry (Configure Scraper)")
+                    elif response == "2": # Pixiv
+                        print("ENGINE:         ", "https://www.pixiv.net/en/ [ PXV ]\n")
+                        for entry in ENTRY_DICT["PXV"]:
+                            print("QUERY:           ", entry.query)
+                            print("MODE:            ", entry.mode, "\n")
+                            if entry.mode == "USR":
+                                print("Rating:            ", entry.rating)
+                    elif response == "3": # Other
+                        for entry in ENTRY_DICT["OTH"]:
+                            print("QUERY:           ", entry.query)
+            else:
+                site = BOORU_DICT.get(engine)
+                print("ENGINE:             ", site, "[", engine, "]\n")
+                for entry in ENTRY_DICT.get(engine):
+                    print("\nQUERY:           ", entry.query)
+                    print("MODE:            ", entry.mode)
+                    print("LOCAL BLACKLIST: ", entry.lob)
 
         def duplicateEntryChecker(engine, query, rating):
             for entry in ENTRY_DICT[engine]:
@@ -460,30 +482,34 @@ class Blacklist:
     def add_blacklist():
         Blacklist.print_blacklist()
         print("Enter globaly applied blacklisted tags to be added to the database (seperate with spaces):")
-        response = input("# ")
+        response = input("# ").lstrip(" ")
         tokens = response.split(' ')
         with open(BLACKLIST, 'a') as file:
             for token in tokens:
                 if (Blacklist.duplicateBlacklistChecker(token) == False):
                     file.write(token + "|")
+                    GLOBAL_BLACKLIST.append(token)
                 else:
                     print(token + " is already registered to the global blacklist")
 
     def remove_blacklist():
         Blacklist.print_blacklist()
         print("Enter Entries to remove, seperate by spaces:")
-        response = input("# ").split(' ')
-        for tokens in response:
-            GLOBAL_BLACKLIST.remove(tokens)
+        response = input("# ").lstrip(" ")
+        response = response.split(' ')
+        for token in response:
+            if token in GLOBAL_BLACKLIST:
+                GLOBAL_BLACKLIST.remove(token)
         with open(BLACKLIST, 'w') as file:
             for token in GLOBAL_BLACKLIST:
                 file.write(token + "|")
+        print("")
 
     def print_blacklist():
-        print("Printing blacklist entries:")
+        print("\nPrinting blacklist entries:")
         for entry in GLOBAL_BLACKLIST:
             print(entry, end=' ')
-        print("")
+        print("Entries removed from blacklist")
 
     def duplicateBlacklistChecker(query):
         return True if query in GLOBAL_BLACKLIST else False
@@ -493,112 +519,133 @@ class Blacklist:
 ####################################################################################################
 class Scraper:
     def init_scraper():
+        print("Initializing Bot...")
+        print("V:", VERSION)
+        
         # Install needed dependencies
+        print("Checking dependencies...")
         dependencies = ["gallery-dl", "yt-dlp"]
         for package in dependencies:
             subprocess.check_call([sys.executable, "-m", "pip", "install", package], stdout=subprocess.DEVNULL)
-        
+        print("Dependencies validated...")
+
         # Setup base structure
+        print("Validating base structure...")
         if not os.path.exists(BASE_PATH):
             os.makedirs(BASE_PATH)
         
         # Setup / Load CONFIG db
         if not os.path.isfile(CONFIG):
+            print("Generating config file...")
             with open(CONFIG, 'w') as file:
                 pass
+        
+        print("Loading config...")
+        with open(CONFIG, 'r') as file:
+            contents = file.read().splitlines()
+        if len(contents) == 0:
+            print("Registering default BOORU engine...")
+            BOORU_DICT["GBU"] = "https://gelbooru.com"
+            ENTRY_DICT["GBU"] = []
+            Scraper.save_db(CONFIG, "GBU|https://gelbooru.com\n", 'a')
         else:
-            print("Loading configuration...")
-            with open(CONFIG, 'r') as file:
-                contents = file.read().splitlines()
-            if len(contents) == 0:
-                print("Registering default BOORU engine...")
-                BOORU_DICT["GBU"] = "https://gelbooru.com"
-                ENTRY_DICT["GBU"] = []
-                Scraper.save_db(CONFIG, "GBU|https://gelbooru.com", 'a')
-
             for entry in contents:
                 try:
                     key, val = entry.split("|")
                     BOORU_DICT[key] = val
                     ENTRY_DICT[key] = []
                 except:
-                    print("Error in configuration file!")
+                    print("Error in config file:", entry)
+                    Scraper.overwrite_db(CONFIG, entry, "")
 
         # Register other engines
+        print("Registering standard engines...")
         ENTRY_DICT["PXV"] = []
         ENTRY_DICT["DVA"] = []
         ENTRY_DICT["OTH"] = []
 
-        # Setup Log file [UNUSED]
-        # if not os.path.isfile(LOG_ARCHIVE):
-        #     with open(LOG_ARCHIVE, 'w') as file:
-        #         pass
+        print("Initializing log file...")
+        if not os.path.isfile(LOG_ARCHIVE):
+            print("Log file not found...")
+            print("Generating log file...")
+            with open(LOG_ARCHIVE, 'w') as file:
+                pass
         
         # Load Entries from the query database
+        print("Loading entries database...")
         try:
             with open(ENTRIES, 'r') as file:
                 contents = file.read()
             
             # Convert old database format to new standard (Migrate database)
             if "@" in contents:
-                print("Old database detected, converting to new format...")
+                print("Old database format detected, converting to new format...")
                 contents = contents.replace("@", "\n")
                 with open(ENTRIES, 'w') as file:
                     file.write(contents)
-                print("Database updated!", len(contents.split('\n')) - 1, "queries adjusted")
+                print("Database updated!", len(contents.split('\n')) - 1, "entries adjusted")
 
             # Load queries into program
-            print("Loading entries...")
-            queries = contents.split('\n')
+            entry_count = 0
+            queries = [item for item in contents.split("\n") if item]
+            # queries = contents.split('\n')
             for query in queries:
-                if query == '':
-                    break
                 try:
                     fragments = query.split('|')
                     Scraper.validate_entry(fragments)
                     fragments.append(query)
                     Entry(*fragments) # Generate entries from the tokenized database entries
+                    entry_count += 1
                 except Exception as e:
                     print(e.args[0], ":", query)
                     print("Deleting bad entry...")
                     Scraper.overwrite_db(ENTRIES, query, "")
+            print(entry_count, "entries loaded")
         except FileNotFoundError:
-            print("Creating query database...")
+            print("Generating entry database...")
             with open(ENTRIES, 'w') as file:
                 pass
         
         # Load Global Blacklist Database
         global GLOBAL_BLACKLIST
+        print("Loading global blacklist...")
         try:
             with open(BLACKLIST, 'r') as file:
-                GLOBAL_BLACKLIST = file.read().split("|")
+                GLOBAL_BLACKLIST = [item for item in file.read().split("|") if item]
+            print(len(GLOBAL_BLACKLIST), "entries loaded")
         except FileNotFoundError:
-            print("Creating blacklist database...")
+            print("Blacklist database not found...")
+            print("Generating blacklist database...")
             with open(BLACKLIST, 'w') as file:
                 pass
         except:
             print("Error in blacklist database")
 
         # Proccess Batchfile
+        print("Proccessing batchfile...")
+        entry_count = 0
         with open(BATCHFILE, 'a+') as file:
             file.seek(0)
             contents = file.read()
         for query in contents.splitlines():
             Entry.add_entry_from_query(query)
+            entry_count += 1
         with open(BATCHFILE, 'w') as file:
             pass
+        print(entry_count, "entries loaded from batchfile into database...")
 
     def validate_entry(fragments):
         if len(fragments) < 6:
             raise Exception("Invalid fragmentation")
         if fragments[0] not in ENTRY_DICT.keys():
             raise Exception("Unrecognized Engine")
-        if fragments[5] not in ["USR", "TAG"]:
+        if fragments[5] not in ["USR", "TAG", "ALT"]:
             raise Exception("Invalid mode identifier")
 
 
     def generate_queries():
         # Generate Queries for dynamic engines
+        print("Generating queries...")
         for engine, entries in ENTRY_DICT.items():
             if engine in BOORU_DICT:
                 web_base = BOORU_DICT.get(engine)
@@ -629,18 +676,22 @@ class Scraper:
                         query = "https://www.pixiv.net/en/users/"
                         query += entry.query + "/"
                     entry.generated_query = query
-            elif entry.engine == "OTH":
-                entry.generated_query += entry.engine
+            elif engine == "OTH":
+                for entry in entries:
+                    entry.generated_query += entry.query
+        print("done")
 
     def execute_queries():
+        print("Executing Bot...")
         for engine, entries in ENTRY_DICT.items():
             for entry in entries:
-                print("Downloading: \n" + entry.generated_query)
                 try:
                     if engine in BOORU_DICT:
                         path = os.path.join("download", "booru", entry.rating, entry.query)
                     elif engine == "PXV":
-                        path = os.path.join("download", "pixiv", entry.query)
+                        path = os.path.join("download", "pixiv", entry.mode, entry.query)
+                    elif engine == "OTH":
+                        path = os.path.join("download", "other", entry.query)
 
                     resCapture = subprocess.run(
                         [
@@ -652,33 +703,35 @@ class Scraper:
                         capture_output=True, 
                         text=True
                     )
-                    if resCapture.stdout != "":
-                        # print(resCapture.stdout.splitlines()[0].split('id:>')[1].split('_')[0].split(" ")[0])
-                        with open(DOWNLOAD_ARCHIVES, 'a') as file:
-                            # Send output to download archives
-                            file.write(resCapture.stdout)
-                        # Gets the LID for BRU storage
-                        lid_token = resCapture.stdout.splitlines()[0].split('_')[-2] if resCapture.stdout else None
-                        if (entry.engine in BOORU_DICT and lid_token != None):
-                            print(lid_token)
-                            old_ent = entry.db_query
-                            entry.lid = lid_token
-                            entry.db_query = Scraper.generate_db_ent(engine, entry.query, entry.lid, entry.lob, entry.rating, entry.mode)
-                            Scraper.overwrite_db(ENTRIES, old_ent, entry.db_query)
-                    print("Execution Completed\n")
                 except:
                     print("Error: Failed to execute query\n")
 
+                if resCapture.stdout != "":
+                    with open(DOWNLOAD_ARCHIVES, 'a') as file:
+                        # Send output to download archives
+                        file.write(resCapture.stdout)
+                    # Gets the LID for BRU storage
+                    if (entry.engine in BOORU_DICT):
+                        lid_token = resCapture.stdout.splitlines()[0].split('_')[-2] if resCapture.stdout else None
+                        old_ent = entry.db_query
+                        entry.lid = lid_token
+                        entry.db_query = Scraper.generate_db_ent(engine, entry.query, entry.lid, entry.lob, entry.rating, entry.mode)
+                        Scraper.overwrite_db(ENTRIES, old_ent, entry.db_query)
+                    elif(entry.engine == "PXV"):
+                        Postproccess.compress_gifS(path)
+                    Postproccess.convert_to_jpg(path)
+                print("Execution Completed\n")
     def print_booru_engines():
         if len(BOORU_DICT) == 0:
-            print("No registered engines\n")
+            print("\nNo registered engines")
         else:
-            print("[KEY : VALUE]")
-            for key, entry in BOORU_DICT.items():
-                print(key, ":", entry)
-            print()
+            print("\n[KEY : SITE]")
+            for key, site in BOORU_DICT.items():
+                print(key, ":", site)
+            print("")
 
     def edit_booru_config():
+        print("\nEditing BOORU config...")
         isExecuting = True
         while(isExecuting):
             print("[1] Add recognized BOORU's")
@@ -691,72 +744,77 @@ class Scraper:
             if query == "1": # Add entry
                 print("\nCurrently recognized BOORU's:")
                 Scraper.print_booru_engines()
-                print("Enter a BOORU site base to associate with a key, or enter 0 to cancel: (Ex: https://gelbooru.com)")
-                value = input("# ")
+                print("Enter a BOORU site base to associate with a key, or enter 0 to cancel: (Ex: https://gelbooru.com, See https://booru.org/top to find new BOORU's)")
+                site = input("# ").rstrip("/ ")
                 sys.stdout.flush()
-                if value == "0":
+                if site in BOORU_DICT.values() and site != "":
+                    print(site, "is already associated with a key.\n")
+                elif site == "0":
                     continue
-                elif value in BOORU_DICT.values() and value != "":
-                    print(value, "is already associated with a key.\n")
                 else:
                     isValidInput = False
                     while(isValidInput == False):
                         print("\nEnter a Key to associate with this site, or enter 0 to cancel: (Ex: GBRU)")
-                        key = input("# ")
+                        key = input("# ").rstrip(" ")
                         sys.stdout.flush()
-                        if key == "0":
-                            print("\nScrapping entry...")
-                        elif key not in BOORU_DICT.keys():
-                            print("\n###########################")
-                            print("Key:", key)
-                            print("Value:", value)
-                            print("###########################")
+                        if key not in BOORU_DICT.keys():
+                            print("\n######################################################")
+                            print("Key:  ", key)
+                            print("Site: ", site)
+                            print("######################################################")
                             if confirm():
-                                BOORU_DICT[key] = value
+                                BOORU_DICT[key] = site
                                 with open(CONFIG, 'a') as file:
-                                    file.write(key + "|" + value + "\n")
+                                    file.write(key + "|" + site + "\n")
                                 isValidInput = True
                             else:
-                                print("\nScrapping entry...")
+                                print("Scrapping entry...\n")
+                                isValidInput = True
+                        elif key == "0":
+                            print("\nScrapping entry...")
                         else:
                             print("Key registered to", BOORU_DICT.get(key))
             elif query == "2": # Modify entry
                 # Validation checker
                 if len(BOORU_DICT) == 0:
-                    print("No registered engines to modify")
+                    print("\nNo registered engines to modify")
                     break
 
+                print("\nCurrently recognized BOORU's:")
                 Scraper.print_booru_engines()
                 isValidInput = False
                 while(isValidInput == False):
                     print("Select Key to modify, or enter 0 to cancel")
-                    old_key = input("# ")
+                    old_key = input("# ").rstrip(' ')
                     sys.stdout.flush()
                     if old_key in BOORU_DICT.keys():
-                        print("\nEnter a Key to associate with", BOORU_DICT.get(old_key), " or enter 0 to cancel: (Ex: GBRU)")
-                        new_key = input("# ")
-                        sys.stdout.flush()
-                        print("\n###########################")
-                        print("Old Key:", old_key)
-                        print("New Key:", new_key)
-                        print("Value:", BOORU_DICT.get(old_key))
-                        print("###########################")
-                        if confirm():
-                            old_text = old_key + "|" + BOORU_DICT.get(old_key)
-                            new_text = new_key + "|" + BOORU_DICT.get(old_key) + "\n"
-                            ENTRY_DICT[new_key] = ENTRY_DICT[old_key]
-                            BOORU_DICT[new_key] = BOORU_DICT[old_key]
-                            for entry in ENTRY_DICT[old_key]:
-                                new_query = Scraper.generate_db_ent(new_key, entry.query, entry.lid, entry.lob, entry.rating, entry.mode)
-                                Scraper.overwrite_db(ENTRIES, entry.db_query, new_query)
-                            Scraper.overwrite_db(CONFIG, old_text, new_text)
-                            del ENTRY_DICT[old_key]
-                            del BOORU_DICT[old_key]
-
-                            isValidInput = True
-
+                        print("\nEnter a Key to associate with", BOORU_DICT.get(old_key), "or enter 0 to cancel: (Ex: GBRU)")
+                        new_key = input("# ").rstrip(' ')
+                        if new_key != 0:
+                            sys.stdout.flush()
+                            print("\n###########################")
+                            print("Old Key:", old_key)
+                            print("New Key:", new_key)
+                            print("Site:   ", BOORU_DICT.get(old_key))
+                            print("###########################")
+                            if confirm():
+                                old_text = old_key + "|" + BOORU_DICT.get(old_key)
+                                new_text = new_key + "|" + BOORU_DICT.get(old_key) + "\n"
+                                ENTRY_DICT[new_key] = ENTRY_DICT[old_key]
+                                BOORU_DICT[new_key] = BOORU_DICT[old_key]
+                                del BOORU_DICT[old_key]
+                                for entry in ENTRY_DICT[new_key]:
+                                    new_query = Scraper.generate_db_ent(new_key, entry.query, entry.lid, entry.lob, entry.rating, entry.mode)
+                                    Scraper.overwrite_db(ENTRIES, entry.db_query, new_query)
+                                    entry.engine = new_key
+                                    entry.db_query = new_query
+                                Scraper.overwrite_db(CONFIG, old_text, new_text)
+                                del ENTRY_DICT[old_key]
+                                isValidInput = True
+                            else:
+                                print("Scrapping entry...\n")
                         else:
-                            print("\nScrapping entry...")
+                            print("Scrapping entry...\n")
 
                         isValidInput = True
                     elif key == "0":
@@ -766,10 +824,10 @@ class Scraper:
             elif query == "3":
                 # Validation checker
                 if len(BOORU_DICT) == 0:
-                    print("No registered engines to delete")
+                    print("\nNo registered engines to delete")
                     break
 
-                print("####################################################################")
+                print("\n####################################################################")
                 print("# WARNING! DELETING AN ENGINE ALSO DELETES ALL CORRELATED ENTRIES! #")
                 print("####################################################################")
                 Scraper.print_booru_engines()
@@ -779,20 +837,20 @@ class Scraper:
                     to_delete = input("# ")
                     sys.stdout.flush()
                     if to_delete in BOORU_DICT.keys():
-                        print("WARNING: DELETING A BOORU ENGINE WILL DELETE ALL RELATED ENTRIES!")
+                        print("\nWARNING: ARE YOU SURE YOU WANT TO DELETE THIS ENGINE AND ALL RELATED ENTRIES?")
                         if confirm():
                             for entry in ENTRY_DICT.get(to_delete):
                                 Scraper.overwrite_db(ENTRIES, entry.db_query, "")
-                            conf = to_delete + "|" + BOORU_DICT.get(to_delete)
                             del BOORU_DICT[to_delete]
                             del ENTRY_DICT[to_delete]
+                            conf = to_delete + "|" + BOORU_DICT.get(to_delete)
                             Scraper.overwrite_db(CONFIG, conf, "")
-                            print("Engine and related entries deleted")
+                            print("Engine and related entries deleted\n")
                             isValidInput = True
                     elif to_delete == "0":
-                        print("Unrecognized engine")
                         isValidInput = True
             elif query == "4":
+                print("")
                 Scraper.print_booru_engines()
             elif query == "0":
                 return
@@ -823,7 +881,7 @@ class Scraper:
             else:
                 db_enc += "|"
         elif engine == "OTH":
-            db_enc += engine
+            db_enc += engine + "|" + query + "||||"
         else:
             print("Invalid Entry")
             return
@@ -841,6 +899,56 @@ class Scraper:
             file.seek(0)
             file.write(modified_content)
             file.truncate()
+
+####################################################################################################
+# Postproccess Class: Functionality for post proccessing of data                                   #
+####################################################################################################
+class Postproccess:
+    def compress_gifS(directory):
+        for root, _, files in os.walk(directory):
+            for file in files:
+                if file.lower().endswith('.zip'):
+                    zip_path = os.path.join(root, file)
+                    extract_to = os.path.join(root, f"_extracted_{os.path.splitext(file)[0]}")
+                    os.makedirs(extract_to, exist_ok=True)
+                    try:
+                        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                            zip_ref.extractall(extract_to)
+                        gif_path = os.path.join(root, f"{os.path.splitext(file)[0]}.gif")
+                        image_files = [
+                            os.path.join(extract_to, f) for f in os.listdir(extract_to)
+                            if f.lower().endswith(('png', 'jpg', 'jpeg', 'bmp', 'tiff'))
+                        ]
+                        if not image_files:
+                            return
+                        image_files.sort()
+                        images = [Image.open(img).convert("RGBA") for img in image_files]
+                        images[0].save(
+                            gif_path, 
+                            save_all=True, 
+                            append_images=images[1:], 
+                            duration=100,
+                            loop=0, 
+                            optimize=True, 
+                            quality=95
+                        )
+                    except Exception as e:
+                        print(f"Error processing {zip_path}: {e}")
+                    finally:
+                        shutil.rmtree(extract_to, ignore_errors=True)
+
+    def convert_to_jpg(directory):
+        file_size_init = 0
+        file_size_final = 0
+        for root, _, files in os.walk(directory):
+            for file in files:
+                if file.endswith(".png"):
+                    png_file = os.path.join(root, file)
+                    jpg_file = png_file[:-4] + ".jpg"
+                    with Image.open(png_file) as img:
+                        rgb_img = img.convert("RGB")
+                        rgb_img.save(jpg_file, "JPEG", quality=80)
+                    os.remove(png_file)
 
 ####################################################################################################
 # Log Class: Functionality for logging class                                                       #
@@ -863,8 +971,6 @@ def confirm():
 # Program entry point and driver
 def main():
     # Setup Phase
-    print("Initializing Bot...")
-    print("V:", VERSION)
     Scraper.init_scraper()
 
     # Automatic Execution
@@ -875,8 +981,8 @@ def main():
     else:
         isExecuting = True
         while(isExecuting):
-            print("#   Enter Command:   #")
-            print("[1] Configure BOORU engines") # Only supports 1 thing right now
+            print("\n###   Enter Command:   ###")
+            print("[1] Configure BOORU engines")
             print("[2] Entry Managment")
             print("[3] View Scraper Metadata")
             print("[4] Exectute Scraper")
@@ -890,7 +996,7 @@ def main():
             elif query == "2": # Entry Managment
                 isMoreInput = True
                 while(isMoreInput == True):
-                    print("###   Entry settings   ###")
+                    print("\n###   Entry settings   ###")
                     print("[1] Add Entry")
                     print("[2] Modify Entry")
                     print("[3] Delete Entry")
@@ -920,7 +1026,7 @@ def main():
             elif query == "3": # View Scraper Metadata
                 isMoreInput = True
                 while(isMoreInput == True):
-                    print("#   View metadata   #")
+                    print("\n###   View metadata   ###")
                     print("[1] Print Entries")
                     print("[2] Print Blacklist")
                     print("[3] Print BOORU config")
