@@ -193,4 +193,17 @@ Licensed under the MIT License. See [LICENSE](LICENSE) for more details
 - Implemented booru config removal system
 - cleaned up booru config entry code
 - Implemented metadata viewing mode
-- Updated REAMDE to reflect new system
+###### 1.2.0 (Major Patch, Branch Split)
+- Implementation of automatic GIF compresser (PIXIV)
+- Implementation of automatic JPG compression (Space efficency enchancment)
+- Removal of Deviantart support
+- Better code comments
+- Significantly improved UI readability
+- Fixed deletion system issues
+- Setup OTHER engine
+- Fixed overwriting class problem (Internal structure issue)
+- Improved on input validation
+- Improved global blacklist problems 
+- Added detailed record keeping of bots progress (Initialization & Execution)
+- Standardized program flow systems
+- Standardized output directories (fixed multi folder creation issue every time the bot was run)
