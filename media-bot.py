@@ -524,7 +524,7 @@ class Scraper:
         
         # Install needed dependencies
         print("Checking dependencies...")
-        dependencies = ["gallery-dl", "yt-dlp"]
+        dependencies = ["gallery-dl", "yt-dlp", "Pillow"]
         for package in dependencies:
             subprocess.check_call([sys.executable, "-m", "pip", "install", package], stdout=subprocess.DEVNULL)
         print("Dependencies validated...")
