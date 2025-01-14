@@ -12,7 +12,7 @@ import subprocess
 import sys
 import zipfile
 import shutil
-# from PIL import Image
+from PIL import Image
 
 VERSION = "1.2.0"                                               # Scripts version
 BASE_PATH = "internal"                                          # Root directory for databases
@@ -692,7 +692,7 @@ class Scraper:
                         path = os.path.join("download", "pixiv", entry.mode, entry.query)
                     elif engine == "OTH":
                         path = os.path.join("download", "other", entry.query)
-
+                    print("QUERY: ", entry.query)
                     resCapture = subprocess.run(
                         [
                             "gallery-dl", 
@@ -720,7 +720,7 @@ class Scraper:
                     elif(entry.engine == "PXV"):
                         Postproccess.compress_gifS(path)
                     Postproccess.convert_to_jpg(path)
-                print("Execution Completed\n")
+                print("Execution Completed")
     def print_booru_engines():
         if len(BOORU_DICT) == 0:
             print("\nNo registered engines")
