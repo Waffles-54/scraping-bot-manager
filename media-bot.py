@@ -12,7 +12,7 @@ import subprocess
 import sys
 import zipfile
 import shutil
-# from PIL import Image
+from PIL import Image
 
 VERSION = "1.2.0"                                               # Scripts version
 BASE_PATH = "internal"                                          # Root directory for databases
