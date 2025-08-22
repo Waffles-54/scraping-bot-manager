@@ -1,4 +1,4 @@
-# scraping-bot-manager
+# scraping-bot-manager [NO LONGER SUPPORTED]
 ## Table of Contents
 - [Description](#description)
     - [Purpouse and Goals](#purpouse-and-goals)
